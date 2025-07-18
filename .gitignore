@@ -1,0 +1,23 @@
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Node
+node_modules/
+npm-debug.log*
+dist/
+*.tsbuildinfo
+
+# Misc
+.DS_Store
+.env
+.env.local
+.env.*.local
+bun.lock

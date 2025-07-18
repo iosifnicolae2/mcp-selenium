@@ -1,0 +1,46 @@
+{
+  "name": "@sirblob/mcp-selenium",
+  "version": "0.2.0",
+  "description": "Selenium WebDriver MCP Server",
+  "author": "SirBlobby",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/src/server.js",
+  "bin": {
+    "mcp-selenium": "./dist/bin/mcp-selenium.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "dev": "tsc --watch",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.16.0",
+    "selenium-webdriver": "^4.34.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.14",
+    "@types/selenium-webdriver": "^4.1.28",
+    "typescript": "^5.8.3"
+  },
+  "homepage": "https://github.com/SirBlobby/mcp-selenium#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SirBlobby/mcp-selenium.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SirBlobby/mcp-selenium/issues"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "selenium",
+    "webdriver",
+    "mcp",
+    "modelcontextprotocol",
+    "automation",
+    "browser-automation"
+  ]
+}
