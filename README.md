@@ -1,6 +1,6 @@
 # MCP Selenium
 
-This is a Model Context Protocol (MCP) server implementation for Selenium WebDriver, enabling browser automation through standardized MCP clients like Claude Desktop, Goose, and other MCP-compatible applications.
+This is a Model Context Protocol (MCP) server implementation for Selenium WebDriver, enabling browser automation through standardized MCP clients like Claude Code and MCP-compatible applications.
 
 **This allows AI assistants to control web browsers programmatically.**
 <br><br>
