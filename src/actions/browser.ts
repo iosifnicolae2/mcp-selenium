@@ -6,14 +6,11 @@ import {
     startChrome, 
     startFirefox, 
     startEdge, 
-    startSafari, 
-    chromeOptionsSchema, 
-    firefoxOptionsSchema, 
-    edgeOptionsSchema, 
-    safariOptionsSchema 
+    startSafari
 } from '../webdrivers/index.js';
 import { getDriver } from '../helpers.js';
 import { state, SessionId } from '../state.js';
+import { browserOptionsSchema } from '../schemas.js';
 
 export const registerBrowserActions = (server: McpServer) => {
     server.tool(
@@ -21,7 +18,7 @@ export const registerBrowserActions = (server: McpServer) => {
         "launches browser",
         {
             browser: z.enum(["chrome", "firefox", "edge", "safari"]).describe("Browser to launch (chrome, firefox, edge, or safari)"),
-            options: z.union([chromeOptionsSchema, firefoxOptionsSchema, edgeOptionsSchema, safariOptionsSchema]).optional()
+            options: browserOptionsSchema
         },
         async ({ browser, options = {} }: { browser: 'chrome' | 'firefox' | 'edge' | 'safari', options?: any }) => {
             try {
@@ -44,7 +41,6 @@ export const registerBrowserActions = (server: McpServer) => {
                         throw new Error(`Unsupported browser: ${browser}`);
                 }
 
-                
                 const sessionId: SessionId = `${browser}_${Date.now()}`;
                 state.drivers.set(sessionId, driver);
                 state.currentSession = sessionId;

@@ -1,7 +1,6 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { z } from "zod";
-import { until } from 'selenium-webdriver';
-import { getDriver, getLocator, buildXPathByText, buildXPathByAttribute, buildXPathForParent, buildXPathForSibling } from '../helpers.js';
+import { getDriver } from '../helpers.js';
 import { state } from '../state.js';
 
 export const registerXPathActions = (server: McpServer) => {
@@ -112,86 +111,40 @@ export const registerXPathActions = (server: McpServer) => {
     );
 
     server.tool(
-        "find_elements_by_xpath_condition",
-        "finds elements using XPath with complex conditions",
+        "get_element_source_by_xpath",
+        "gets the HTML source code of elements matching an XPath expression",
         {
-            tag: z.string().describe("HTML tag to search for"),
-            conditions: z.array(z.object({
-                attribute: z.string().describe("Attribute name"),
-                operator: z.enum(["equals", "contains", "starts-with", "ends-with", "greater-than", "less-than"]).describe("Comparison operator"),
-                value: z.string().describe("Value to compare against")
-            })).describe("Array of conditions to match"),
-            logic: z.enum(["and", "or"]).optional().describe("Logic operator for multiple conditions"),
+            xpath: z.string().describe("XPath expression to find elements"),
+            includeChildren: z.boolean().optional().describe("Whether to include child elements (default: true)"),
             timeout: z.number().optional().describe("Maximum time to wait for elements in milliseconds")
         },
-        async ({ tag, conditions, logic = "and", timeout = 10000 }) => {
+        async ({ xpath, includeChildren = true, timeout = 10000 }) => {
             try {
                 const driver = getDriver(state);
                 
-                const conditionStrings = conditions.map(({ attribute, operator, value }) => {
-                    switch (operator) {
-                        case "contains":
-                            return `contains(@${attribute}, '${value}')`;
-                        case "starts-with":
-                            return `starts-with(@${attribute}, '${value}')`;
-                        case "ends-with":
-                            return `substring(@${attribute}, string-length(@${attribute}) - string-length('${value}') + 1) = '${value}'`;
-                        case "greater-than":
-                            return `@${attribute} > ${value}`;
-                        case "less-than":
-                            return `@${attribute} < ${value}`;
-                        default:
-                            return `@${attribute}='${value}'`;
+                // Use JavaScript to get the HTML content
+                const htmlContent = await driver.executeScript(`
+                    var result = document.evaluate('${xpath}', document, null, XPathResult.ORDERED_NODE_ITERATOR_TYPE, null);
+                    var htmlSources = [];
+                    var node = result.iterateNext();
+                    while (node) {
+                        if (node.nodeType === Node.ELEMENT_NODE) {
+                            htmlSources.push(${includeChildren} ? node.outerHTML : node.outerHTML.replace(node.innerHTML, ''));
+                        }
+                        node = result.iterateNext();
                     }
-                });
+                    return htmlSources;
+                `);
                 
-                const logicOperator = logic === "and" ? " and " : " or ";
-                const xpath = `//${tag}[${conditionStrings.join(logicOperator)}]`;
-                
-                const locator = getLocator('xpath', xpath);
-                await driver.wait(until.elementLocated(locator), timeout);
-                const elements = await driver.findElements(locator);
+                const htmlArray = htmlContent as string[];
+                const combinedHTML = htmlArray.join('\n\n');
                 
                 return {
-                    content: [{ type: 'text', text: `Found ${elements.length} elements matching complex XPath conditions` }]
+                    content: [{ type: 'text', text: combinedHTML || 'No HTML content found' }]
                 };
             } catch (e: any) {
                 return {
-                    content: [{ type: 'text', text: `Error finding elements with conditions: ${e.message}` }]
-                };
-            }
-        }
-    );
-
-    server.tool(
-        "find_element_by_xpath_axes",
-        "finds elements using XPath axes (ancestor, descendant, following, preceding, etc.)",
-        {
-            baseXpath: z.string().describe("Base XPath expression"),
-            axis: z.enum(["ancestor", "ancestor-or-self", "descendant", "descendant-or-self", "following", "following-sibling", "preceding", "preceding-sibling", "parent", "child"]).describe("XPath axis to use"),
-            nodeTest: z.string().optional().describe("Node test (e.g., 'div', 'span', '*')"),
-            predicate: z.string().optional().describe("Additional predicate condition"),
-            timeout: z.number().optional().describe("Maximum time to wait for elements in milliseconds")
-        },
-        async ({ baseXpath, axis, nodeTest = "*", predicate, timeout = 10000 }) => {
-            try {
-                const driver = getDriver(state);
-                
-                let xpath = `(${baseXpath})/${axis}::${nodeTest}`;
-                if (predicate) {
-                    xpath += `[${predicate}]`;
-                }
-                
-                const locator = getLocator('xpath', xpath);
-                await driver.wait(until.elementLocated(locator), timeout);
-                const elements = await driver.findElements(locator);
-                
-                return {
-                    content: [{ type: 'text', text: `Found ${elements.length} elements using ${axis} axis from base XPath` }]
-                };
-            } catch (e: any) {
-                return {
-                    content: [{ type: 'text', text: `Error finding elements using axis: ${e.message}` }]
+                    content: [{ type: 'text', text: `Error getting element source: ${e.message}` }]
                 };
             }
         }

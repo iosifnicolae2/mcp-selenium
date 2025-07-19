@@ -16,9 +16,8 @@ import {
 
 const server = new McpServer({
     name: "MCP Selenium",
-    version: "0.2.0"
+    version: "0.2.1"
 });
-
 
 registerBrowserActions(server);
 registerElementActions(server);

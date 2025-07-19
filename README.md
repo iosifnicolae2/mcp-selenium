@@ -4,7 +4,9 @@ This is a Model Context Protocol (MCP) server implementation for Selenium WebDri
 
 **This allows AI assistants to control web browsers programmatically.**
 <br><br>
-<img style="display: inline-block;" src="https://img.shields.io/npm/v/@sirblob/mcp-selenium"> <img style="display: inline-block;" src="https://img.shields.io/npm/dt/@sirblob/mcp-selenium" > <img style="display: inline-block;" src="https://img.shields.io/github/issues/SirBlobby/mcp-selenium" >
+<img style="display: inline-block;" src="https://img.shields.io/npm/v/@sirblob/mcp-selenium">
+<img style="display: inline-block;" src="https://img.shields.io/npm/dt/@sirblob/mcp-selenium" >
+<img style="display: inline-block;" src="https://img.shields.io/github/issues/SirBlobby/mcp-selenium" >
 
 ## Installation
 Install the package using npm:
@@ -47,197 +49,122 @@ Add to your MCP client configuration:
 - Support for headless mode
 - Cookie management
 - Window/tab management
+- Select element interaction (dropdowns)
+- Table data extraction and manipulation
 
 ## Available Tools
 
-## Start Browser
-```javascript
-// Start a Chrome browser
-await startBrowser({ browser: "chrome", options: { headless: true } });
+### Browser Management
+- **start_browser** - Launches a browser (Chrome, Firefox, Edge, or Safari) with optional configuration
+- **navigate** - Navigates to a specified URL
+- **close_session** - Closes the current browser session
+- **get_browser_status** - Gets the status of the current browser session
 
-// Start Firefox with custom arguments
-await startBrowser({ 
-  browser: "firefox", 
-  options: { 
-    headless: false, 
-    arguments: ["--width=1920", "--height=1080"] 
-  } 
-});
-```
+### Element Finding and Interaction
+- **find_element** - Finds an element using various locator strategies
+- **click_element** - Clicks on an element
+- **send_keys** - Sends text input to an element (typing)
+- **get_element_text** - Gets the text content of an element
+- **get_element_source** - Gets the HTML source code of an element and all its child elements
+- **upload_file** - Uploads a file using a file input element
+- **find_elements_by_xpath** - Finds multiple elements using XPath
+- **scroll_to_element** - Scrolls to bring an element into view
 
-## Navigate
-```javascript
-await navigate({ url: "https://example.com" });
-```
+### Select Element Tools
+- **select_option_by_text** - Selects an option in a select element by its visible text
+- **select_option_by_value** - Selects an option in a select element by its value attribute
+- **select_option_by_index** - Selects an option in a select element by its index
+- **get_select_options** - Gets all available options from a select element
+- **get_selected_option** - Gets the currently selected option from a select element
 
-## Find Elements
-```javascript
-// Find by ID
-await findElement({ by: "id", value: "submit-button" });
+### Table Element Tools
+- **get_table_data** - Extracts all data from a table element
+- **get_table_cell** - Gets the content of a specific table cell by row and column
+- **click_table_cell** - Clicks on a specific table cell by row and column
+- **get_table_row_count** - Gets the number of rows in a table
+- **get_table_column_count** - Gets the number of columns in a table
+- **find_table_row_by_text** - Finds a table row that contains specific text
 
-// Find by CSS selector
-await findElement({ by: "css", value: ".login-form input[type='email']" });
+### List Element Tools
+- **get_list_items** - Gets all items from a list element (ul or ol)
+- **get_list_item** - Gets a specific list item by index
+- **click_list_item** - Clicks on a specific list item by index
+- **click_list_item_by_text** - Clicks on a list item that contains specific text
+- **find_list_item_by_text** - Finds the index of a list item that contains specific text
+- **get_list_item_count** - Gets the number of items in a list
+- **get_nested_lists** - Gets information about nested lists within a list
+- **filter_list_items** - Filters list items based on text criteria
 
-// Find by XPath
-await findElement({ by: "xpath", value: "//button[contains(text(), 'Login')]" });
+### Element State and Properties
+- **get_element_attribute** - Gets an attribute value from an element
+- **get_element_css_property** - Gets a CSS property value from an element
+- **is_element_displayed** - Checks if an element is visible
+- **is_element_enabled** - Checks if an element is enabled/interactive
+- **is_element_selected** - Checks if an element is selected (for checkboxes, radio buttons)
 
-// Find multiple elements by XPath
-await findElementsByXpath({ xpath: "//div[@class='product-item']" });
+### Mouse and Keyboard Interactions
+- **hover_element** - Hovers over an element
+- **drag_and_drop** - Drags an element to another location
+- **double_click** - Double-clicks an element
+- **right_click** - Right-clicks an element (context menu)
+- **send_key_combination** - Sends keyboard combinations (Ctrl+C, etc.)
 
-// Find element by XPath with attribute conditions
-await findElementByXpathAttribute({ 
-  tag: "input", 
-  attribute: "placeholder", 
-  value: "Enter email", 
-  operator: "contains" 
-});
-```
+### Page Actions
+- **take_screenshot** - Captures a screenshot of the current page
+- **get_page_title** - Gets the current page title
+- **get_current_url** - Gets the current page URL
+- **get_page_source** - Gets the complete HTML source of the page
+- **refresh_page** - Refreshes the current page
+- **go_back** - Navigates back in browser history
+- **go_forward** - Navigates forward in browser history
 
-## Advanced XPath Features
-```javascript
-// Click element containing specific text
-await clickElementByXpathText({ text: "Submit", tag: "button" });
+### JavaScript Execution
+- **execute_javascript** - Executes JavaScript code in the browser
+- **execute_async_javascript** - Executes asynchronous JavaScript with callback support
 
-// Find parent element
-await findParentElement({ childXpath: "//input[@id='username']" });
+### Scrolling
+- **scroll_to_element** - Scrolls to bring an element into view
+- **scroll_by_pixels** - Scrolls by a specified number of pixels
+- **scroll_to_top** - Scrolls to the top of the page
+- **scroll_to_bottom** - Scrolls to the bottom of the page
 
-// Find sibling elements
-await findSiblingElement({ 
-  baseXpath: "//label[text()='Email']", 
-  direction: "following", 
-  tag: "input" 
-});
+### Window Management
+- **get_window_size** - Gets the current window dimensions
+- **set_window_size** - Sets the window size
+- **maximize_window** - Maximizes the browser window
+- **get_window_handles** - Gets all open window handles
+- **switch_to_window** - Switches to a specific window
+- **close_window** - Closes the current window
 
-// Find element by index
-await findElementByXpathIndex({ xpath: "//div[@class='item']", index: 3 });
+### Cookie Management
+- **get_cookies** - Gets all cookies for the current domain
+- **add_cookie** - Adds a new cookie
+- **delete_cookie** - Deletes a specific cookie
+- **delete_all_cookies** - Deletes all cookies
 
-// Get XPath of an element
-await getElementXpath({ by: "id", value: "submit-button" });
+### XPath Tools
+- **evaluate_xpath** - Evaluates an XPath expression and returns the result
+- **count_elements_by_xpath** - Counts elements matching an XPath expression
+- **get_xpath_text_content** - Gets text content from elements matching XPath
+- **get_element_source_by_xpath** - Gets HTML source of elements matching XPath
 
-// Get XPath of multiple elements
-await getElementsXpath({ 
-  by: "class", 
-  value: "menu-item", 
-  includeText: true 
-});
+## Parameters
 
-// Count elements matching XPath
-await countElementsByXpath({ xpath: "//tr[@class='data-row']" });
-
-// Get text content from multiple elements
-await getXpathTextContent({ 
-  xpath: "//li[@class='menu-item']", 
-  separator: " | " 
-});
-
-// Evaluate XPath expressions
-await evaluateXpath({ 
-  xpath: "count(//div[@class='product'])", 
-  resultType: "number" 
-});
-
-// Find elements with complex conditions
-await findElementsByXpathCondition({
-  tag: "input",
-  conditions: [
-    { attribute: "type", operator: "equals", value: "text" },
-    { attribute: "class", operator: "contains", value: "form-control" }
-  ],
-  logic: "and"
-});
-
-// Use XPath axes for complex navigation
-await findElementByXpathAxes({
-  baseXpath: "//div[@id='main']",
-  axis: "descendant",
-  nodeTest: "button",
-  predicate: "contains(@class, 'primary')"
-});
-```
-
-## Interact with Elements
-```javascript
-// Click an element
-await clickElement({ by: "id", value: "submit-button" });
-
-// Type text
-await typeText({ by: "name", value: "username", text: "myusername" });
-
-// Upload file
-await uploadFile({ by: "id", value: "file-input", filePath: "/path/to/file.pdf" });
-
-// Scroll to element
-await scrollToElement({ 
-  by: "id", 
-  value: "footer", 
-  behavior: "smooth", 
-  block: "center" 
-});
-
-// Highlight element
-await highlightElement({ 
-  by: "class", 
-  value: "important", 
-  color: "yellow", 
-  duration: 5000 
-});
-```
-
-## JavaScript Injection & Scrolling
-```javascript
-// Execute JavaScript
-await executeJavascript({ 
-  script: "return document.title;" 
-});
-
-// Execute async JavaScript with callback
-await executeAsyncJavascript({ 
-  script: "setTimeout(arguments[arguments.length - 1], 1000);", 
-  timeout: 5000 
-});
-
-// Scroll to top/bottom
-await scrollToTop();
-await scrollToBottom();
-
-// Scroll by pixels
-await scrollByPixels({ x: 0, y: 500 });
-
-// Scroll to coordinates
-await scrollToCoordinates({ x: 0, y: 1000 });
-
-// Scroll element into view
-await scrollElementIntoView({ 
-  by: "id", 
-  value: "target-element", 
-  alignToTop: true 
-});
-
-// Check element state
-await isElementDisplayed({ by: "id", value: "modal" });
-await isElementEnabled({ by: "id", value: "submit-btn" });
-await isElementSelected({ by: "id", value: "checkbox" });
-
-// Get element properties
-await getElementAttribute({ by: "id", value: "link", attribute: "href" });
-await getElementCssProperty({ by: "id", value: "box", property: "background-color" });
-```
-
-## Browser Options
-```typescript
-interface BrowserOptions {
-    headless?: boolean;        // Run browser in headless mode
-    arguments?: string[];      // Additional browser arguments
+### Browser Options
+```json
+{
+  "headless": false,
+  "arguments": ["--window-size=1920,1080", "--disable-web-security"]
 }
 ```
 
-## Locator Strategies
-- `id` - Find by element ID
-- `css` - Find by CSS selector
-- `xpath` - Find by XPath expression
-- `name` - Find by name attribute
-- `tag` - Find by tag name
-- `class` - Find by class name
+### Locator Strategies
+- **id** - Find by element ID
+- **css** - Find by CSS selector  
+- **xpath** - Find by XPath expression
+- **name** - Find by name attribute
+- **tag** - Find by tag name
+- **class** - Find by class name
 
 ## Development
 ```bash

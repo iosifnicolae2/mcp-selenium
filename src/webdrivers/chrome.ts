@@ -6,7 +6,7 @@ import { z } from "zod";
 export const chromeOptionsSchema = z.object({
     headless: z.boolean().optional().describe("Run Chrome in headless mode"),
     arguments: z.array(z.string()).optional().describe("Additional Chrome arguments")
-}).optional();
+});
 
 export type ChromeOptionsType = z.infer<typeof chromeOptionsSchema>;
 

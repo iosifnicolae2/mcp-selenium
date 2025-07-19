@@ -5,7 +5,7 @@ import { z } from "zod";
 export const edgeOptionsSchema = z.object({
     headless: z.boolean().optional().describe("Run Edge in headless mode"),
     arguments: z.array(z.string()).optional().describe("Additional Edge arguments")
-}).optional();
+});
 
 export type EdgeOptionsType = z.infer<typeof edgeOptionsSchema>;
 

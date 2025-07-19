@@ -6,7 +6,7 @@ import { z } from "zod";
 export const firefoxOptionsSchema = z.object({
     headless: z.boolean().optional().describe("Run Firefox in headless mode"),
     arguments: z.array(z.string()).optional().describe("Additional Firefox arguments")
-}).optional();
+});
 
 export type FirefoxOptionsType = z.infer<typeof firefoxOptionsSchema>;
 

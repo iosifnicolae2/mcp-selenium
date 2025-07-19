@@ -131,4 +131,62 @@ export const registerInteractionActions = (server: McpServer) => {
             }
         }
     );
+
+    server.tool(
+        "send_key_combination",
+        "sends keyboard combinations like Ctrl+C, Ctrl+V, etc.",
+        {
+            keys: z.array(z.string()).describe("Array of keys to press simultaneously (e.g., ['Control', 'c'])")
+        },
+        async ({ keys }) => {
+            try {
+                const driver = getDriver(state);
+                const actions = driver.actions({ bridge: true });
+                
+                // Press all keys down
+                let action = actions;
+                for (const key of keys) {
+                    action = action.keyDown(key);
+                }
+                
+                // Release all keys in reverse order
+                for (let i = keys.length - 1; i >= 0; i--) {
+                    action = action.keyUp(keys[i]);
+                }
+                
+                await action.perform();
+                return {
+                    content: [{ type: 'text', text: `Key combination ${keys.join('+')} sent` }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{ type: 'text', text: `Error sending key combination: ${e.message}` }]
+                };
+            }
+        }
+    );
+
+    server.tool(
+        "hover_element",
+        "moves the mouse to hover over an element (alias for hover)",
+        {
+            ...locatorSchema
+        },
+        async ({ by, value, timeout = 10000 }) => {
+            try {
+                const driver = getDriver(state);
+                const locator = getLocator(by, value);
+                const element = await driver.wait(until.elementLocated(locator), timeout);
+                const actions = driver.actions({ bridge: true });
+                await actions.move({ origin: element }).perform();
+                return {
+                    content: [{ type: 'text', text: 'Hovered over element' }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{ type: 'text', text: `Error hovering over element: ${e.message}` }]
+                };
+            }
+        }
+    );
 };

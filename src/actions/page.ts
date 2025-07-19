@@ -222,4 +222,99 @@ export const registerPageActions = (server: McpServer) => {
             }
         }
     );
+
+    server.tool(
+        "go_back",
+        "navigates back in browser history",
+        {},
+        async () => {
+            try {
+                const driver = getDriver(state);
+                await driver.navigate().back();
+                return {
+                    content: [{ type: 'text', text: 'Navigated back in history' }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{ type: 'text', text: `Error navigating back: ${e.message}` }]
+                };
+            }
+        }
+    );
+
+    server.tool(
+        "go_forward",
+        "navigates forward in browser history",
+        {},
+        async () => {
+            try {
+                const driver = getDriver(state);
+                await driver.navigate().forward();
+                return {
+                    content: [{ type: 'text', text: 'Navigated forward in history' }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{ type: 'text', text: `Error navigating forward: ${e.message}` }]
+                };
+            }
+        }
+    );
+
+    server.tool(
+        "refresh_page",
+        "refreshes the current page",
+        {},
+        async () => {
+            try {
+                const driver = getDriver(state);
+                await driver.navigate().refresh();
+                return {
+                    content: [{ type: 'text', text: 'Page refreshed' }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{ type: 'text', text: `Error refreshing page: ${e.message}` }]
+                };
+            }
+        }
+    );
+
+    server.tool(
+        "get_page_title",
+        "gets the current page title",
+        {},
+        async () => {
+            try {
+                const driver = getDriver(state);
+                const title = await driver.getTitle();
+                return {
+                    content: [{ type: 'text', text: title }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{ type: 'text', text: `Error getting page title: ${e.message}` }]
+                };
+            }
+        }
+    );
+
+    server.tool(
+        "get_page_source",
+        "gets the complete HTML source of the page",
+        {},
+        async () => {
+            try {
+                const driver = getDriver(state);
+                const source = await driver.getPageSource();
+                return {
+                    content: [{ type: 'text', text: source }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{ type: 'text', text: `Error getting page source: ${e.message}` }]
+                };
+            }
+        }
+    );
 };

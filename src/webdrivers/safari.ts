@@ -2,7 +2,9 @@ import { Builder, WebDriver, Browser } from 'selenium-webdriver';
 import { Options as SafariOptions } from 'selenium-webdriver/safari.js';
 import { z } from "zod";
 
-export const safariOptionsSchema = z.object({}).optional();
+export const safariOptionsSchema = z.object({
+    // Safari has limited options support
+});
 
 export type SafariOptionsType = z.infer<typeof safariOptionsSchema>;
 
