@@ -4,7 +4,6 @@ A comprehensive Model Context Protocol (MCP) server implementation for Selenium 
 
 **This allows AI assistants to control web browsers programmatically with 80+ automation tools.**
 
-<br><br>
 <img style="display: inline-block;" src="https://img.shields.io/npm/v/@sirblob/mcp-selenium">
 <img style="display: inline-block;" src="https://img.shields.io/npm/dt/@sirblob/mcp-selenium" >
 <img style="display: inline-block;" src="https://img.shields.io/github/issues/SirBlobby/mcp-selenium" >
@@ -41,7 +40,7 @@ Add to your MCP client configuration:
 - **Edge** - Full feature support including headless mode
 - **Safari** - Basic feature support (limited options)
 
-## Available Tools (80+ Tools)
+## Available Tools
 
 ### Browser Management
 - **start_browser** - Launches a browser (Chrome, Firefox, Edge, or Safari) with optional configuration
@@ -203,48 +202,11 @@ Most tools accept an optional `timeout` parameter (default: 10000ms):
 }
 ```
 
-## Development
-
-### Setup
-```bash
-# Clone the repository
-git clone https://github.com/SirBlobby/mcp-selenium.git
-cd mcp-selenium
-
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-
-# Start the server for testing
-npm start
-```
-
-### Development Commands
-```bash
-# Watch mode for development
-npm run dev
-
-# Clean build artifacts
-npm run clean
-
-# Build TypeScript
-npm run build
-```
-
 ### Requirements
 - **Node.js** 22+ 
 - **npm** or **pnpm**
 - **Browser drivers** (automatically managed by Selenium)
 - **TypeScript** 5.0+ (dev dependency)
-
-### Contributing
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests if applicable
-5. Submit a pull request
 
 ## Troubleshooting
 
@@ -262,11 +224,5 @@ npm run build
 ## License
 MIT License - see [LICENSE](LICENSE) file for details.
 
-## Credits
+## Acknowledgements
 Inspired by [@angiejones/mcp-selenium](https://github.com/angiejones/mcp-selenium)
-
----
-
-**Version:** 0.2.1  
-**Author:** SirBlobby  
-**Repository:** [https://github.com/SirBlobby/mcp-selenium](https://github.com/SirBlobby/mcp-selenium)
