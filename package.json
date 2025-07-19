@@ -1,6 +1,6 @@
 {
   "name": "@sirblob/mcp-selenium",
-  "version": "0.2.1",
+  "version": "1.0.0",
   "description": "Selenium WebDriver MCP Server",
   "author": "SirBlobby",
   "license": "MIT",

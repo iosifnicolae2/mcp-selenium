@@ -488,30 +488,26 @@ export const registerElementActions = (server: McpServer) => {
 
     server.tool(
         "highlight_element",
-        "highlights an element by adding a colored border",
+        "highlights an element by adding a red 3px border",
         {
             ...locatorSchema,
-            color: z.string().optional().describe("Border color (default: red)"),
             duration: z.number().optional().describe("Duration in milliseconds to keep highlight")
         },
-        async ({ by, value, color = "red", duration = 3000, timeout = 10000 }) => {
+        async ({ by, value, duration = 3000, timeout = 10000 }) => {
             try {
                 const driver = getDriver(state);
                 const locator = getLocator(by, value);
                 const element = await driver.wait(until.elementLocated(locator), timeout);
-                
                 await driver.executeScript(`
                     var element = arguments[0];
                     var originalStyle = element.style.border;
-                    element.style.border = '3px solid ${color}';
-                    element.style.borderRadius = '3px';
+                    element.style.border = '3px solid red';
                     setTimeout(function() {
                         element.style.border = originalStyle;
                     }, ${duration});
                 `, element);
-                
                 return {
-                    content: [{ type: 'text', text: `Element highlighted with ${color} border for ${duration}ms` }]
+                    content: [{ type: 'text', text: `Element highlighted with red border for ${duration}ms` }]
                 };
             } catch (e: any) {
                 return {

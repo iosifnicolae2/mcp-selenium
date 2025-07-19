@@ -1,24 +1,28 @@
 # MCP Selenium
 
-This is a Model Context Protocol (MCP) server implementation for Selenium WebDriver, enabling browser automation through standardized MCP clients like Claude Code and MCP-compatible applications.
+A comprehensive Model Context Protocol (MCP) server implementation for Selenium WebDriver, enabling advanced browser automation through standardized MCP clients like Claude Desktop and other MCP-compatible applications.
 
-**This allows AI assistants to control web browsers programmatically.**
+**This allows AI assistants to control web browsers programmatically with 80+ automation tools.**
+
 <br><br>
 <img style="display: inline-block;" src="https://img.shields.io/npm/v/@sirblob/mcp-selenium">
 <img style="display: inline-block;" src="https://img.shields.io/npm/dt/@sirblob/mcp-selenium" >
 <img style="display: inline-block;" src="https://img.shields.io/github/issues/SirBlobby/mcp-selenium" >
 
 ## Installation
+
 Install the package using npm:
 ```bash
 npm install @sirblob/mcp-selenium
 ```
+
 Install the package using pnpm:
 ```bash
 pnpm install @sirblob/mcp-selenium
 ```
 
 ## Usage
+
 Add to your MCP client configuration:
 ```json
 {
@@ -32,27 +36,12 @@ Add to your MCP client configuration:
 ```
 
 ## Supported Browsers
-- Chrome
-- Firefox
-- Edge
-- Safari
+- **Chrome** - Full feature support including headless mode
+- **Firefox** - Full feature support including headless mode  
+- **Edge** - Full feature support including headless mode
+- **Safari** - Basic feature support (limited options)
 
-## Features
-- Start browser sessions with customizable options
-- Navigate to URLs
-- Find elements using various locator strategies
-- Click, type, and interact with elements
-- Perform mouse actions (hover, drag and drop)
-- Handle keyboard input
-- Take screenshots
-- Upload files
-- Support for headless mode
-- Cookie management
-- Window/tab management
-- Select element interaction (dropdowns)
-- Table data extraction and manipulation
-
-## Available Tools
+## Available Tools (80+ Tools)
 
 ### Browser Management
 - **start_browser** - Launches a browser (Chrome, Firefox, Edge, or Safari) with optional configuration
@@ -69,6 +58,9 @@ Add to your MCP client configuration:
 - **upload_file** - Uploads a file using a file input element
 - **find_elements_by_xpath** - Finds multiple elements using XPath
 - **scroll_to_element** - Scrolls to bring an element into view
+- **highlight_element** - Highlights an element with a colored border for debugging
+- **find_parent_element** - Finds the parent element of a given element
+- **find_sibling_element** - Finds sibling elements of a given element
 
 ### Select Element Tools
 - **select_option_by_text** - Selects an option in a select element by its visible text
@@ -103,17 +95,21 @@ Add to your MCP client configuration:
 - **is_element_selected** - Checks if an element is selected (for checkboxes, radio buttons)
 
 ### Mouse and Keyboard Interactions
-- **hover_element** - Hovers over an element
+- **hover** - Moves the mouse to hover over an element
+- **hover_element** - Alternative hover command for element interaction
 - **drag_and_drop** - Drags an element to another location
 - **double_click** - Double-clicks an element
 - **right_click** - Right-clicks an element (context menu)
-- **send_key_combination** - Sends keyboard combinations (Ctrl+C, etc.)
+- **send_key_combination** - Sends keyboard combinations (Ctrl+C, Alt+Tab, etc.)
+- **press_key** - Simulates pressing a single keyboard key
 
 ### Page Actions
 - **take_screenshot** - Captures a screenshot of the current page and saves it to the current directory with timestamp
 - **get_page_title** - Gets the current page title
+- **get_title** - Alternative method to get the current page title
 - **get_current_url** - Gets the current page URL
 - **get_page_source** - Gets the complete HTML source of the page
+- **page_source** - Alternative method to get the complete HTML source of the page
 - **refresh_page** - Refreshes the current page
 - **go_back** - Navigates back in browser history
 - **go_forward** - Navigates forward in browser history
@@ -124,7 +120,9 @@ Add to your MCP client configuration:
 
 ### Scrolling
 - **scroll_to_element** - Scrolls to bring an element into view
+- **scroll_element_into_view** - Alternative method to scroll an element into view
 - **scroll_by_pixels** - Scrolls by a specified number of pixels
+- **scroll_to_coordinates** - Scrolls to specific coordinates on the page
 - **scroll_to_top** - Scrolls to the top of the page
 - **scroll_to_bottom** - Scrolls to the bottom of the page
 
@@ -133,8 +131,12 @@ Add to your MCP client configuration:
 - **set_window_size** - Sets the window size
 - **maximize_window** - Maximizes the browser window
 - **get_window_handles** - Gets all open window handles
-- **switch_to_window** - Switches to a specific window
+- **switch_to_window** - Switches to a specific window by handle
+- **switch_to_window_by_title** - Switches to a window/tab by its title
+- **switch_to_window_by_url** - Switches to a window/tab by its URL
 - **close_window** - Closes the current window
+- **switch_to_frame** - Switches to a frame by ID or name
+- **switch_to_default_content** - Switches back to the main document
 
 ### Cookie Management
 - **get_cookies** - Gets all cookies for the current domain
@@ -147,29 +149,67 @@ Add to your MCP client configuration:
 - **count_elements_by_xpath** - Counts elements matching an XPath expression
 - **get_xpath_text_content** - Gets text content from elements matching XPath
 - **get_element_source_by_xpath** - Gets HTML source of elements matching XPath
+- **get_element_xpath** - Gets the XPath of an element
+- **get_elements_xpath** - Gets XPath expressions for multiple elements
+- **get_element_attribute_by_xpath** - Gets an attribute value from an element using XPath
+- **find_element_by_xpath_attribute** - Finds elements by XPath and attribute values
+- **find_element_by_xpath_index** - Finds an element by XPath at a specific index
+- **click_element_by_xpath_text** - Clicks an element found by XPath containing specific text
 
-## Parameters
+## Advanced Element Operations
+
+### Element State and Properties
+- **get_element_attribute** - Gets an attribute value from an element
+- **get_element_css_property** - Gets a CSS property value from an element
+- **is_element_displayed** - Checks if an element is visible
+- **is_element_enabled** - Checks if an element is enabled/interactive
+- **is_element_selected** - Checks if an element is selected (for checkboxes, radio buttons)
+
+## Configuration Parameters
 
 ### Browser Options
+Configure browser behavior with optional parameters:
 ```json
 {
   "headless": false,
-  "arguments": ["--window-size=1920,1080", "--disable-web-security"]
+  "arguments": ["--window-size=1920,1080", "--disable-web-security", "--disable-dev-shm-usage"]
 }
 ```
 
+**Common Browser Arguments:**
+- `--headless=new` - Run in headless mode (Chrome/Edge)
+- `--window-size=width,height` - Set initial window size
+- `--disable-web-security` - Disable CORS restrictions
+- `--disable-dev-shm-usage` - Overcome limited resource problems
+- `--no-sandbox` - Disable sandbox (useful in containerized environments)
+- `--disable-gpu` - Disable GPU hardware acceleration
+
 ### Locator Strategies
-- **id** - Find by element ID
-- **css** - Find by CSS selector  
-- **xpath** - Find by XPath expression
-- **name** - Find by name attribute
-- **tag** - Find by tag name
-- **class** - Find by class name
+Multiple ways to find elements on the page:
+- **id** - Find by element ID (`<div id="myElement">`)
+- **css** - Find by CSS selector (`div.class-name`, `#id-name`)
+- **xpath** - Find by XPath expression (`//div[@class='example']`)
+- **name** - Find by name attribute (`<input name="username">`)
+- **tag** - Find by HTML tag name (`div`, `span`, `input`)
+- **class** - Find by class name (`class-name`)
+
+### Timeout Configuration
+Most tools accept an optional `timeout` parameter (default: 10000ms):
+```json
+{
+  "by": "id",
+  "value": "submit-button",
+  "timeout": 15000
+}
+```
 
 ## Development
+
+### Setup
 ```bash
 # Clone the repository
 git clone https://github.com/SirBlobby/mcp-selenium.git
+cd mcp-selenium
 
 # Install dependencies
 npm install
@@ -177,8 +217,56 @@ npm install
 # Build the project
 npm run build
 
-# Start the server
+# Start the server for testing
 npm start
 ```
 
-#### Inspired by [@angiejones/mcp-selenium](https://github.com/angiejones/mcp-selenium)
+### Development Commands
+```bash
+# Watch mode for development
+npm run dev
+
+# Clean build artifacts
+npm run clean
+
+# Build TypeScript
+npm run build
+```
+
+### Requirements
+- **Node.js** 22+ 
+- **npm** or **pnpm**
+- **Browser drivers** (automatically managed by Selenium)
+- **TypeScript** 5.0+ (dev dependency)
+
+### Contributing
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Add tests if applicable
+5. Submit a pull request
+
+## Troubleshooting
+
+### Common Issues
+- **Driver not found**: Selenium automatically downloads drivers, but ensure you have the target browser installed
+- **Permission errors**: On Linux, you may need to install browser packages (`chromium-browser`, `firefox`, etc.)
+- **Timeout errors**: Increase timeout values for slow-loading pages
+- **Headless mode issues**: Some features may not work in headless mode (file uploads, certain interactions)
+
+### Platform-Specific Notes
+- **macOS**: Safari requires enabling automation in Safari preferences
+- **Linux**: May require additional dependencies for GUI browsers
+- **Windows**: Should work out of the box with standard browser installations
+
+## License
+MIT License - see [LICENSE](LICENSE) file for details.
+
+## Credits
+Inspired by [@angiejones/mcp-selenium](https://github.com/angiejones/mcp-selenium)
+
+---
+
+**Version:** 0.2.1  
+**Author:** SirBlobby  
+**Repository:** [https://github.com/SirBlobby/mcp-selenium](https://github.com/SirBlobby/mcp-selenium)
