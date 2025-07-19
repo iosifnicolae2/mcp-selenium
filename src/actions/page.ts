@@ -9,27 +9,29 @@ export const registerPageActions = (server: McpServer) => {
         "take_screenshot",
         "captures a screenshot of the current page",
         {
-            outputPath: z.string().optional().describe("Optional path where to save the screenshot. If not provided, returns base64 data.")
+            outputPath: z.string().optional().describe("Optional path where to save the screenshot. If not provided, saves to current directory with timestamp.")
         },
         async ({ outputPath }) => {
             try {
                 const driver = getDriver(state);
                 const screenshot = await driver.takeScreenshot();
                 
-                if (outputPath) {
-                    const fs = await import('fs');
-                    await fs.promises.writeFile(outputPath, screenshot, 'base64');
-                    return {
-                        content: [{ type: 'text', text: `Screenshot saved to ${outputPath}` }]
-                    };
-                } else {
-                    return {
-                        content: [
-                            { type: 'text', text: 'Screenshot captured as base64:' },
-                            { type: 'text', text: screenshot }
-                        ]
-                    };
+                // If no outputPath provided, save to current directory with timestamp
+                if (!outputPath) {
+                    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+                    outputPath = `screenshot-${timestamp}.png`;
                 }
+                
+                const fs = await import('fs');
+                const path = await import('path');
+                
+                // Resolve the path relative to current working directory
+                const fullPath = path.resolve(process.cwd(), outputPath);
+                
+                await fs.promises.writeFile(fullPath, screenshot, 'base64');
+                return {
+                    content: [{ type: 'text', text: `Screenshot saved to ${fullPath}` }]
+                };
             } catch (e: any) {
                 return {
                     content: [{ type: 'text', text: `Error taking screenshot: ${e.message}` }]

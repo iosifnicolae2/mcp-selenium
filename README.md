@@ -110,7 +110,7 @@ Add to your MCP client configuration:
 - **send_key_combination** - Sends keyboard combinations (Ctrl+C, etc.)
 
 ### Page Actions
-- **take_screenshot** - Captures a screenshot of the current page
+- **take_screenshot** - Captures a screenshot of the current page and saves it to the current directory with timestamp
 - **get_page_title** - Gets the current page title
 - **get_current_url** - Gets the current page URL
 - **get_page_source** - Gets the complete HTML source of the page
