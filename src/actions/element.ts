@@ -665,39 +665,6 @@ export const registerElementActions = (server: McpServer) => {
     );
 
     server.tool(
-        "scroll_to_element",
-        "scrolls to bring an element into view",
-        {
-            ...locatorSchema,
-            behavior: z.enum(["auto", "smooth"]).optional().describe("Scroll behavior"),
-            block: z.enum(["start", "center", "end", "nearest"]).optional().describe("Vertical alignment")
-        },
-        async ({ by, value, behavior = "auto", block = "start", timeout = 10000 }) => {
-            try {
-                const driver = getDriver(state);
-                const locator = getLocator(by, value);
-                const element = await driver.wait(until.elementLocated(locator), timeout);
-                
-                await driver.executeScript(`
-                    arguments[0].scrollIntoView({
-                        behavior: '${behavior}',
-                        block: '${block}',
-                        inline: 'nearest'
-                    });
-                `, element);
-                
-                return {
-                    content: [{ type: 'text', text: 'Scrolled to element' }]
-                };
-            } catch (e: any) {
-                return {
-                    content: [{ type: 'text', text: `Error scrolling to element: ${e.message}` }]
-                };
-            }
-        }
-    );
-
-    server.tool(
         "select_option_by_text",
         "selects an option in a select element by its visible text",
         {
