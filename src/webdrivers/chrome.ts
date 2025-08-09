@@ -1,8 +1,8 @@
 
-import { Builder, WebDriver, Browser } from 'selenium-webdriver';
+import { Builder, WebDriver, Browser, logging } from 'selenium-webdriver';
 import { Options as ChromeOptions } from 'selenium-webdriver/chrome.js';
 import { z } from "zod";
-import { getNetworkLogger } from '../network-logger.js';
+import { getNetworkLogger } from '../network-logger-cdp.js';
 
 export const chromeOptionsSchema = z.object({
     headless: z.boolean().optional().describe("Run Chrome in headless mode"),
@@ -27,30 +27,39 @@ export const startChrome = async (options: ChromeOptionsType = {}): Promise<WebD
         options.arguments.forEach(arg => chromeOptions.addArguments(arg));
     }
 
-    // Configure network logging if enabled
+    // Configure native Chrome logging for network requests
     if (shouldLogNetwork) {
-        const networkLogger = getNetworkLogger();
+        // Enable performance and network logging
+        const loggingPrefs = new logging.Preferences();
+        loggingPrefs.setLevel(logging.Type.PERFORMANCE, logging.Level.ALL);
         
-        // Start the proxy server
-        await networkLogger.start();
+        // Set Chrome-specific capabilities for network logging
+        chromeOptions.setLoggingPrefs(loggingPrefs);
+        // Enable network domain in DevTools
+        chromeOptions.set('goog:loggingPrefs', { 'performance': 'ALL' });
+        chromeOptions.set('goog:perfLoggingPrefs', {
+            enableNetwork: true
+        });
         
-        const proxyPort = networkLogger.getProxyPort();
-        
-        // Configure Chrome to use the proxy
-        chromeOptions.addArguments(`--proxy-server=http://localhost:${proxyPort}`);
-        chromeOptions.addArguments('--ignore-certificate-errors');
-        chromeOptions.addArguments('--ignore-ssl-errors');
-        chromeOptions.addArguments('--allow-running-insecure-content');
-        chromeOptions.addArguments('--disable-web-security');
-        
-        console.log(`Chrome configured to use network logging proxy on port ${proxyPort}`);
-        console.log(`Network logs will be saved to: ${networkLogger.getLogDirectory()}`);
+        console.log('Chrome configured with native network logging');
+        if (options.networkLogDir) {
+            console.log(`Network logs will be saved to: ${options.networkLogDir}`);
+        }
     }
 
     const driver = await new Builder()
         .forBrowser(Browser.CHROME)
         .setChromeOptions(chromeOptions)
         .build();
+
+    // If network logging is enabled, set up log collection
+    if (shouldLogNetwork) {
+        const networkLogger = getNetworkLogger();
+        networkLogger.setDriver(driver);
+        networkLogger.setLogDirectory(options.networkLogDir);
+        await networkLogger.startCapture();
+        console.log(`Network logging started. Logs directory: ${networkLogger.getLogDirectory()}`);
+    }
 
     return driver;
 };
