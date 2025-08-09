@@ -108,13 +108,30 @@ export class NetworkLoggerCDP {
                             request.responseHeaders = response.headers;
                             request.type = response.mimeType;
                             
-                            // Save response to separate file
+                            // Try to get response body
+                            let responseBody: string | undefined;
+                            try {
+                                // Execute CDP command to get response body
+                                const bodyResult = await (this.driver as any).executeCdpCommand('Network.getResponseBody', {
+                                    requestId: requestId
+                                });
+                                responseBody = bodyResult.body;
+                                
+                                // Also update the request object with response body
+                                request.responseBody = responseBody;
+                            } catch (error) {
+                                // Response body might not be available for all requests (e.g., redirects, non-text content)
+                                console.log(`  └─ Could not retrieve response body for ${response.url}`);
+                            }
+                            
+                            // Save response to separate file with body
                             const responseFilepath = await this.saveResponse({
                                 requestId,
                                 url: response.url,
                                 status: response.status,
                                 headers: response.headers,
                                 mimeType: response.mimeType,
+                                body: responseBody,
                                 timestamp: new Date().toISOString()
                             });
                             
@@ -125,7 +142,7 @@ export class NetworkLoggerCDP {
                             await this.updateIndex(request, filepath, responseFilepath);
                             
                             // Log response to console
-                            console.log(`  └─ Response: ${response.status} (${response.mimeType})`);
+                            console.log(`  └─ Response: ${response.status} (${response.mimeType})${responseBody ? ' [body captured]' : ''}`);
                         }
                     } else if (method === 'Network.loadingFinished') {
                         // Update request with final size information
