@@ -17,8 +17,6 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "debug": "npm run build && npx @modelcontextprotocol/inspector node dist/src/server.js",
-    "inspect": "npx @modelcontextprotocol/inspector node dist/src/server.js"
   },
   "dependencies": {
     "@iosifnicolae22/mcp-selenium": "^1.2.2",
