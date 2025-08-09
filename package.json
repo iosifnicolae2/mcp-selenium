@@ -1,5 +1,5 @@
 {
-  "name": "@sirblob/mcp-selenium",
+  "name": "@iosifnicolae22/mcp-selenium",
   "version": "1.2.0",
   "description": "Selenium WebDriver MCP Server",
   "author": "SirBlobby",
@@ -13,18 +13,25 @@
     "build": "tsc",
     "start": "node dist/src/server.js",
     "dev": "tsc --watch",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.16.0",
     "@types/express": "^5.0.3",
     "express": "^5.1.0",
+    "http-proxy-middleware": "^3.0.5",
     "selenium-webdriver": "^4.34.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@types/jest": "^30.0.0",
     "@types/node": "^24.0.14",
     "@types/selenium-webdriver": "^4.1.28",
+    "jest": "^30.0.5",
+    "ts-jest": "^29.4.1",
     "typescript": "^5.8.3"
   },
   "homepage": "https://github.com/SirBlobby/mcp-selenium#readme",

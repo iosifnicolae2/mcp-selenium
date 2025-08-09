@@ -35,10 +35,23 @@ Add to your MCP client configuration:
 ```
 
 ## Supported Browsers
-- **Chrome** - Full feature support including headless mode
-- **Firefox** - Full feature support including headless mode  
-- **Edge** - Full feature support including headless mode
-- **Safari** - Basic feature support (limited options)
+- **Chrome** - Full feature support including headless mode and network logging
+- **Firefox** - Full feature support including headless mode (network logging not supported)
+- **Edge** - Full feature support including headless mode and network logging
+- **Safari** - Basic feature support (limited options, network logging not supported)
+
+### Network Request Logging
+Network request logging is available **only for Chromium-based browsers** (Chrome and Edge). This feature automatically captures all HTTP/HTTPS requests made by the page and saves them to log files for analysis.
+
+**Supported browsers for network logging:**
+- ✅ **Chrome** - Full network logging support via Chrome DevTools Protocol
+- ✅ **Edge** - Full network logging support via Chrome DevTools Protocol  
+- ❌ **Firefox** - Network logging not supported
+- ❌ **Safari** - Network logging not supported
+
+**Network Logging Tools:**
+- `get_network_log_directory` - Gets the directory where network logs are saved
+- `get_page_requests` - Gets all network requests captured for the current page
 
 ## Available Tools
 
@@ -171,9 +184,15 @@ Configure browser behavior with optional parameters:
 ```json
 {
   "headless": false,
-  "arguments": ["--window-size=1920,1080", "--disable-web-security", "--disable-dev-shm-usage"]
+  "arguments": ["--window-size=1920,1080", "--disable-web-security", "--disable-dev-shm-usage"],
+  "logNetworkRequests": true,
+  "networkLogDir": "/custom/path/to/logs"
 }
 ```
+
+**Network Logging Options (Chrome/Edge only):**
+- `logNetworkRequests` - Enable/disable network request logging (default: `true` for Chrome/Edge)
+- `networkLogDir` - Custom directory for network logs (default: OS temp directory)
 
 **Common Browser Arguments:**
 - `--headless=new` - Run in headless mode (Chrome/Edge)

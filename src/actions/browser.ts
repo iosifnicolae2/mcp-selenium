@@ -11,7 +11,7 @@ import {
 import { getDriver } from '../helpers.js';
 import { state, SessionId } from '../state.js';
 import { browserOptionsSchema } from '../schemas.js';
-import { getNetworkLogger } from '../network-logger.js';
+import { getNetworkLogger } from '../network-logger-cdp.js';
 
 export const registerBrowserActions = (server: McpServer) => {
     server.tool(
@@ -68,9 +68,11 @@ export const registerBrowserActions = (server: McpServer) => {
                 const driver = getDriver(state);
                 await driver.get(url);
                 
-                // Update network logger with current URL
-                const networkLogger = getNetworkLogger();
-                networkLogger.setCurrentUrl(url);
+                // Update network logger with current URL (only for Chromium browsers)
+                if (state.currentSession?.startsWith('chrome_') || state.currentSession?.startsWith('edge_')) {
+                    const networkLogger = getNetworkLogger();
+                    // CDP logger doesn't have setCurrentUrl method, no action needed
+                }
                 
                 return {
                     content: [{ type: 'text', text: `Navigated to ${url}` }]
@@ -97,12 +99,14 @@ export const registerBrowserActions = (server: McpServer) => {
                 }
                 state.currentSession = null;
 
-                // Stop network logger if running
-                try {
-                    const networkLogger = getNetworkLogger();
-                    await networkLogger.stop();
-                } catch (loggerError) {
-                    console.warn('Failed to stop network logger:', loggerError);
+                // Stop network logger if running (only for Chromium browsers)
+                if (sessionId?.startsWith('chrome_') || sessionId?.startsWith('edge_')) {
+                    try {
+                        const networkLogger = getNetworkLogger();
+                        await networkLogger.stopCapture();
+                    } catch (loggerError) {
+                        console.warn('Failed to stop network logger:', loggerError);
+                    }
                 }
 
                 return {
@@ -138,6 +142,12 @@ export const registerBrowserActions = (server: McpServer) => {
         {},
         async () => {
             try {
+                if (!state.currentSession?.startsWith('chrome_') && !state.currentSession?.startsWith('edge_')) {
+                    return {
+                        content: [{ type: 'text', text: 'Network logging is only available for Chromium-based browsers (Chrome, Edge)' }]
+                    };
+                }
+                
                 const networkLogger = getNetworkLogger();
                 const logDir = networkLogger.getLogDirectory();
                 return {
@@ -159,30 +169,37 @@ export const registerBrowserActions = (server: McpServer) => {
         },
         async ({ pageUrl }) => {
             try {
-                const networkLogger = getNetworkLogger();
-                
-                if (pageUrl) {
-                    networkLogger.setCurrentUrl(pageUrl);
+                if (!state.currentSession?.startsWith('chrome_') && !state.currentSession?.startsWith('edge_')) {
+                    return {
+                        content: [{ type: 'text', text: 'Network logging is only available for Chromium-based browsers (Chrome, Edge)' }]
+                    };
                 }
                 
-                const index = await networkLogger.getRequestsForCurrentPage();
+                const networkLogger = getNetworkLogger();
+                const requests = networkLogger.getRequests();
                 
-                if (!index || index.requests.length === 0) {
+                if (requests.length === 0) {
                     return {
-                        content: [{ type: 'text', text: 'No network requests found for the current page' }]
+                        content: [{ type: 'text', text: 'No network requests found' }]
                     };
                 }
 
-                // Return the index with request summaries
+                // Filter by page URL if provided
+                const filteredRequests = pageUrl ? 
+                    requests.filter(req => req.url.includes(pageUrl)) : 
+                    requests;
+
+                // Return the summary
                 const summary = {
-                    currentUrl: index.currentUrl,
-                    totalRequests: index.requests.length,
-                    requests: index.requests.map(req => ({
+                    totalRequests: filteredRequests.length,
+                    pageUrl: pageUrl || 'All pages',
+                    requests: filteredRequests.map(req => ({
                         timestamp: req.timestamp,
                         method: req.method,
                         url: req.url,
-                        status: req.status,
-                        requestFile: req.requestFile
+                        status: req.responseStatus,
+                        type: req.type,
+                        size: req.size
                     }))
                 };
 
