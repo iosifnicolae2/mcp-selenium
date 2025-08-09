@@ -21,3 +21,6 @@ dist/
 .env.local
 .env.*.local
 bun.lock
+
+# Build/Deploy
+Makefile
