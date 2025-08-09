@@ -54,6 +54,17 @@ export const startChrome = async (options: ChromeOptionsType = {}): Promise<WebD
 
     // If network logging is enabled, set up log collection
     if (shouldLogNetwork) {
+        // Enable Network domain via CDP to capture response bodies
+        try {
+            await (driver as any).sendAndGetDevToolsCommand('Network.enable', {
+                maxTotalBufferSize: 10000000,
+                maxResourceBufferSize: 5000000
+            });
+            console.log('CDP Network domain enabled for response body capture');
+        } catch (error) {
+            console.error('Failed to enable CDP Network domain:', error);
+        }
+        
         const networkLogger = getNetworkLogger();
         networkLogger.setDriver(driver);
         networkLogger.setLogDirectory(options.networkLogDir);

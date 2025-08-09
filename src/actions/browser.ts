@@ -45,6 +45,11 @@ export const registerBrowserActions = (server: McpServer) => {
                 const sessionId: SessionId = `${browser}_${Date.now()}`;
                 state.drivers.set(sessionId, driver);
                 state.currentSession = sessionId;
+                
+                // Store session options
+                state.sessionOptions.set(sessionId, {
+                    preserveNetworkLogs: options?.preserveNetworkLogs
+                });
 
                 return {
                     content: [{ type: 'text', text: `Browser started with session_id: ${sessionId}` }]
@@ -94,18 +99,23 @@ export const registerBrowserActions = (server: McpServer) => {
                 const driver = getDriver(state);
                 await driver.quit();
                 const sessionId = state.currentSession;
+                const sessionOptions = sessionId ? state.sessionOptions.get(sessionId) : undefined;
+                
                 if (sessionId) {
                     state.drivers.delete(sessionId);
+                    state.sessionOptions.delete(sessionId);
                 }
                 state.currentSession = null;
 
-                // Stop network logger if running (only for Chromium browsers)
+                // Stop network logger and clean up logs if running (only for Chromium browsers)
                 if (sessionId?.startsWith('chrome_') || sessionId?.startsWith('edge_')) {
                     try {
                         const networkLogger = getNetworkLogger();
-                        await networkLogger.stopCapture();
+                        // Clean up logs unless preserveNetworkLogs is true
+                        const shouldCleanup = !sessionOptions?.preserveNetworkLogs;
+                        await networkLogger.stopCapture(shouldCleanup);
                     } catch (loggerError) {
-                        console.warn('Failed to stop network logger:', loggerError);
+                        console.error('Failed to stop network logger:', loggerError);
                     }
                 }
 

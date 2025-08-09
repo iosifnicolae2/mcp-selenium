@@ -1,7 +1,6 @@
 import { WebDriver, logging } from 'selenium-webdriver';
 import fs from 'fs/promises';
 import path from 'path';
-import os from 'os';
 
 export interface NetworkRequest {
     url: string;
@@ -27,7 +26,10 @@ export class NetworkLoggerCDP {
     private isCapturing: boolean = false;
 
     constructor() {
-        this.logDir = path.join(os.tmpdir(), 'mcp-selenium-network-logs', Date.now().toString());
+        // Use project directory for logs instead of temp directory
+        // Resolve from the current working directory (where the server is run from)
+        const projectRoot = process.cwd();
+        this.logDir = path.join(projectRoot, '.network-logs', Date.now().toString());
     }
 
     setDriver(driver: WebDriver) {
@@ -111,8 +113,8 @@ export class NetworkLoggerCDP {
                             // Try to get response body
                             let responseBody: string | undefined;
                             try {
-                                // Execute CDP command to get response body
-                                const bodyResult = await (this.driver as any).executeCdpCommand('Network.getResponseBody', {
+                                // Execute CDP command to get response body using the correct method
+                                const bodyResult = await (this.driver as any).sendAndGetDevToolsCommand('Network.getResponseBody', {
                                     requestId: requestId
                                 });
                                 responseBody = bodyResult.body;
@@ -121,6 +123,7 @@ export class NetworkLoggerCDP {
                                 request.responseBody = responseBody;
                             } catch (error) {
                                 // Response body might not be available for all requests (e.g., redirects, non-text content)
+                                // This is expected for some requests, so we just log as debug info
                                 console.log(`  └─ Could not retrieve response body for ${response.url}`);
                             }
                             
@@ -166,33 +169,33 @@ export class NetworkLoggerCDP {
         } catch (error) {
             // Driver might be closed or logs not available
             if (this.isCapturing) {
-                console.warn('Failed to capture network logs:', error);
+                console.error('Failed to capture network logs:', error);
             }
         }
     }
 
     private async saveRequest(request: NetworkRequest): Promise<string> {
-        const filename = `request_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.json`;
+        const filename = `request_${Date.now()}_${Math.random().toString(36).substring(2, 11)}.json`;
         const filepath = path.join(this.logDir, filename);
         
         try {
             await fs.writeFile(filepath, JSON.stringify(request, null, 2));
             return filepath;
         } catch (error) {
-            console.warn('Failed to save network request:', error);
+            console.error('Failed to save network request:', error);
             return filepath;
         }
     }
     
     private async saveResponse(response: any): Promise<string> {
-        const filename = `response_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.json`;
+        const filename = `response_${Date.now()}_${Math.random().toString(36).substring(2, 11)}.json`;
         const filepath = path.join(this.logDir, filename);
         
         try {
             await fs.writeFile(filepath, JSON.stringify(response, null, 2));
             return filepath;
         } catch (error) {
-            console.warn('Failed to save network response:', error);
+            console.error('Failed to save network response:', error);
             return filepath;
         }
     }
@@ -235,7 +238,7 @@ export class NetworkLoggerCDP {
         await fs.writeFile(indexFile, JSON.stringify(index, null, 2));
     }
 
-    async stopCapture(): Promise<void> {
+    async stopCapture(cleanup: boolean = true): Promise<void> {
         this.isCapturing = false;
         
         if (this.captureInterval) {
@@ -249,6 +252,20 @@ export class NetworkLoggerCDP {
         }
 
         console.log(`Network capture stopped. Logs saved to: ${this.logDir}`);
+        
+        // Clean up the log directory if requested
+        if (cleanup) {
+            await this.cleanupLogs();
+        }
+    }
+    
+    async cleanupLogs(): Promise<void> {
+        try {
+            await fs.rm(this.logDir, { recursive: true, force: true });
+            console.log(`Network logs cleaned up: ${this.logDir}`);
+        } catch (error) {
+            console.error(`Failed to clean up network logs at ${this.logDir}:`, error);
+        }
     }
 
     getLogDirectory(): string {
