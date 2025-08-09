@@ -10,7 +10,7 @@ jest.mock('selenium-webdriver');
 
 const mockFs = fs as jest.Mocked<typeof fs>;
 
-describe('NetworkLoggerCDP', () => {
+describe('NetworkLoggerCDP Unit Tests', () => {
     let logger: NetworkLoggerCDP;
     let mockDriver: jest.Mocked<WebDriver>;
     let mockGet: jest.MockedFunction<any>;

@@ -227,6 +227,31 @@ Most tools accept an optional `timeout` parameter (default: 10000ms):
 - **Browser drivers** (automatically managed by Selenium)
 - **TypeScript** 5.0+ (dev dependency)
 
+## Testing
+
+The project includes comprehensive tests for network logging functionality:
+
+### Unit Tests
+```bash
+npm test                           # Run all tests
+npm test -- --testPathPattern=unit # Run only unit tests
+```
+
+### Integration Tests
+Integration tests require Chrome browser to be installed:
+```bash
+npm test -- tests/network-logger-cdp.integration.test.ts
+```
+
+### Manual Testing
+A manual test script is provided to demonstrate network logging:
+```bash
+npm run build                     # Build the project first
+node test-network-logging.js      # Run the manual test
+```
+
+This will launch Chrome, navigate to example.com, and show captured network requests.
+
 ## Troubleshooting
 
 ### Common Issues
