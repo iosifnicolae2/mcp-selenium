@@ -18,6 +18,9 @@ export interface NetworkRequest {
     requestId?: string;
     requestFilepath?: string;
     responseFilepath?: string;
+    requestBodyFilepath?: string;
+    responseBodyFilepath?: string;
+    uniqueId?: string;
 }
 
 export class NetworkLoggerCDP {
@@ -79,13 +82,15 @@ export class NetworkLoggerCDP {
 
                     // Process network events
                     if (method === 'Network.requestWillBeSent') {
+                        const uniqueId = this.generateUniqueId();
                         const request: NetworkRequest = {
                             url: params.request.url,
                             method: params.request.method,
                             headers: params.request.headers,
                             timestamp: new Date(params.wallTime * 1000).toISOString(),
                             requestBody: params.request.postData,
-                            requestId: params.requestId
+                            requestId: params.requestId,
+                            uniqueId: uniqueId
                         };
                         
                         // Save request immediately and get the filepath
@@ -131,7 +136,7 @@ export class NetworkLoggerCDP {
                                 console.log(`  └─ Could not retrieve response body for ${response.url}`);
                             }
                             
-                            // Save response to separate file with body
+                            // Save response to separate file with body using same unique ID
                             const responseFilepath = await this.saveResponse({
                                 requestId,
                                 url: response.url,
@@ -140,23 +145,23 @@ export class NetworkLoggerCDP {
                                 mimeType: response.mimeType,
                                 body: responseBody,
                                 timestamp: new Date().toISOString()
-                            });
+                            }, request.uniqueId!);
                             
-                            // Update request with response filepath
+                            // Update request with response filepath and body filepath if exists
                             request.responseFilepath = responseFilepath;
+                            if (responseBody) {
+                                request.responseBodyFilepath = `response_${request.uniqueId}_body.raw`;
+                            }
                             
-                            // Update the request file with beautified content
-                            const beautifiedRequest = { ...request };
-                            if (beautifiedRequest.requestBody) {
-                                const contentType = beautifiedRequest.headers?.['content-type'] as string || 
-                                                   beautifiedRequest.headers?.['Content-Type'] as string;
-                                beautifiedRequest.requestBody = this.beautifyContent(beautifiedRequest.requestBody, contentType) || beautifiedRequest.requestBody;
+                            // Update the request file
+                            const requestToUpdate = { ...request };
+                            if (requestToUpdate.requestBody) {
+                                requestToUpdate.requestBody = `[See: request_${request.uniqueId}_body.raw]`;
                             }
-                            if (beautifiedRequest.responseBody) {
-                                const contentType = beautifiedRequest.type;
-                                beautifiedRequest.responseBody = this.beautifyContent(beautifiedRequest.responseBody, contentType) || beautifiedRequest.responseBody;
+                            if (requestToUpdate.responseBody) {
+                                requestToUpdate.responseBody = `[See: response_${request.uniqueId}_body.raw]`;
                             }
-                            await fs.writeFile(filepath, JSON.stringify(beautifiedRequest, null, 2));
+                            await fs.writeFile(filepath, JSON.stringify(requestToUpdate, null, 2));
                             
                             // Update index with both request and response paths
                             await this.updateIndex(request, filepath, responseFilepath);
@@ -175,18 +180,15 @@ export class NetworkLoggerCDP {
                             const { request, filepath } = requestData;
                             request.size = encodedDataLength;
                             
-                            // Update the request file with size and beautified content
-                            const beautifiedRequest = { ...request };
-                            if (beautifiedRequest.requestBody) {
-                                const contentType = beautifiedRequest.headers?.['content-type'] as string || 
-                                                   beautifiedRequest.headers?.['Content-Type'] as string;
-                                beautifiedRequest.requestBody = this.beautifyContent(beautifiedRequest.requestBody, contentType) || beautifiedRequest.requestBody;
+                            // Update the request file with size
+                            const requestToUpdate = { ...request };
+                            if (requestToUpdate.requestBody) {
+                                requestToUpdate.requestBody = `[See: request_${request.uniqueId}_body.raw]`;
                             }
-                            if (beautifiedRequest.responseBody) {
-                                const contentType = beautifiedRequest.type;
-                                beautifiedRequest.responseBody = this.beautifyContent(beautifiedRequest.responseBody, contentType) || beautifiedRequest.responseBody;
+                            if (requestToUpdate.responseBody) {
+                                requestToUpdate.responseBody = `[See: response_${request.uniqueId}_body.raw]`;
                             }
-                            await fs.writeFile(filepath, JSON.stringify(beautifiedRequest, null, 2));
+                            await fs.writeFile(filepath, JSON.stringify(requestToUpdate, null, 2));
                         }
                     }
                 } catch (parseError) {
@@ -237,22 +239,40 @@ export class NetworkLoggerCDP {
         }
     }
 
+    private generateUniqueId(): string {
+        return `${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
+    }
+
     private async saveRequest(request: NetworkRequest): Promise<string> {
-        const filename = `request_${Date.now()}_${Math.random().toString(36).substring(2, 11)}.json`;
+        // Generate or use existing unique ID
+        const uniqueId = request.uniqueId || this.generateUniqueId();
+        request.uniqueId = uniqueId;
+        
+        const filename = `request_${uniqueId}.json`;
         const filepath = path.join(this.logDir, filename);
         
         try {
-            // Create a copy of the request to beautify
-            const beautifiedRequest = { ...request };
+            // Create a copy of the request to save
+            const requestToSave = { ...request };
             
-            // Beautify the request body if it exists
-            if (beautifiedRequest.requestBody) {
-                const contentType = beautifiedRequest.headers?.['content-type'] as string || 
-                                   beautifiedRequest.headers?.['Content-Type'] as string;
-                beautifiedRequest.requestBody = this.beautifyContent(beautifiedRequest.requestBody, contentType) || beautifiedRequest.requestBody;
+            // Save request body to separate .raw file if it exists
+            if (request.requestBody) {
+                const contentType = request.headers?.['content-type'] as string || 
+                                   request.headers?.['Content-Type'] as string;
+                const beautifiedBody = this.beautifyContent(request.requestBody, contentType);
+                
+                if (beautifiedBody) {
+                    // Always save body to separate .raw file
+                    const bodyFilename = `request_${uniqueId}_body.raw`;
+                    const bodyFilepath = path.join(this.logDir, bodyFilename);
+                    await fs.writeFile(bodyFilepath, beautifiedBody);
+                    requestToSave.requestBody = `[See: ${bodyFilename}]`;
+                    requestToSave.requestBodyFilepath = bodyFilename;
+                }
             }
             
-            await fs.writeFile(filepath, JSON.stringify(beautifiedRequest, null, 2));
+            // Save the request metadata
+            await fs.writeFile(filepath, JSON.stringify(requestToSave, null, 2));
             return filepath;
         } catch (error) {
             console.error('Failed to save network request:', error);
@@ -260,23 +280,33 @@ export class NetworkLoggerCDP {
         }
     }
     
-    private async saveResponse(response: any): Promise<string> {
-        const filename = `response_${Date.now()}_${Math.random().toString(36).substring(2, 11)}.json`;
+    private async saveResponse(response: any, uniqueId: string): Promise<string> {
+        const filename = `response_${uniqueId}.json`;
         const filepath = path.join(this.logDir, filename);
         
         try {
-            // Create a copy of the response to beautify
-            const beautifiedResponse = { ...response };
+            // Create a copy of the response to save
+            const responseToSave = { ...response, uniqueId };
             
-            // Beautify the response body if it exists
-            if (beautifiedResponse.body) {
-                const contentType = beautifiedResponse.mimeType || 
-                                   beautifiedResponse.headers?.['content-type'] || 
-                                   beautifiedResponse.headers?.['Content-Type'];
-                beautifiedResponse.body = this.beautifyContent(beautifiedResponse.body, contentType) || beautifiedResponse.body;
+            // Save response body to separate .raw file if it exists
+            if (response.body) {
+                const contentType = response.mimeType || 
+                                   response.headers?.['content-type'] || 
+                                   response.headers?.['Content-Type'];
+                const beautifiedBody = this.beautifyContent(response.body, contentType);
+                
+                if (beautifiedBody) {
+                    // Always save body to separate .raw file
+                    const bodyFilename = `response_${uniqueId}_body.raw`;
+                    const bodyFilepath = path.join(this.logDir, bodyFilename);
+                    await fs.writeFile(bodyFilepath, beautifiedBody);
+                    responseToSave.body = `[See: ${bodyFilename}]`;
+                    responseToSave.bodyFilepath = bodyFilename;
+                }
             }
             
-            await fs.writeFile(filepath, JSON.stringify(beautifiedResponse, null, 2));
+            // Save the response metadata
+            await fs.writeFile(filepath, JSON.stringify(responseToSave, null, 2));
             return filepath;
         } catch (error) {
             console.error('Failed to save network response:', error);
@@ -295,12 +325,13 @@ export class NetworkLoggerCDP {
             // File doesn't exist yet
         }
 
-        // Find existing entry or create new one
+        // Find existing entry by unique ID or create new one
         const existingIndex = index.requests.findIndex((r: any) => 
-            r.url === request.url && r.timestamp === request.timestamp
+            r.uniqueId === request.uniqueId
         );
 
         const entry = {
+            uniqueId: request.uniqueId,
             timestamp: request.timestamp,
             url: request.url,
             method: request.method,
@@ -308,7 +339,9 @@ export class NetworkLoggerCDP {
             type: request.type,
             size: request.size,
             requestFilepath: requestFilepath || undefined,
-            responseFilepath: responseFilepath || undefined
+            responseFilepath: responseFilepath || undefined,
+            requestBodyFilepath: request.requestBodyFilepath || undefined,
+            responseBodyFilepath: request.responseBodyFilepath || undefined
         };
 
         if (existingIndex >= 0) {
@@ -377,7 +410,7 @@ export class NetworkLoggerCDP {
         for (const request of this.requests) {
             const matches: any[] = [];
             
-            // Search in request file
+            // Search in request metadata file
             if (request.requestFilepath) {
                 try {
                     const content = await fs.readFile(request.requestFilepath, 'utf-8');
@@ -393,7 +426,7 @@ export class NetworkLoggerCDP {
                                 .join('\n');
                             
                             matches.push({
-                                type: 'request',
+                                type: 'request-metadata',
                                 filepath: request.requestFilepath,
                                 lineNumber: i + 1,
                                 matchedLine: lines[i],
@@ -406,7 +439,37 @@ export class NetworkLoggerCDP {
                 }
             }
             
-            // Search in response file
+            // Search in request body .raw file
+            if (request.requestBodyFilepath) {
+                try {
+                    const bodyFilepath = path.join(this.logDir, request.requestBodyFilepath);
+                    const content = await fs.readFile(bodyFilepath, 'utf-8');
+                    const lines = content.split('\n');
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        if (matcher(lines[i])) {
+                            // Get context lines
+                            const startLine = Math.max(0, i - contextLines);
+                            const endLine = Math.min(lines.length - 1, i + contextLines);
+                            const contextText = lines.slice(startLine, endLine + 1)
+                                .map((line, idx) => `${startLine + idx + 1}: ${line}`)
+                                .join('\n');
+                            
+                            matches.push({
+                                type: 'request-body',
+                                filepath: request.requestBodyFilepath,
+                                lineNumber: i + 1,
+                                matchedLine: lines[i],
+                                context: contextText
+                            });
+                        }
+                    }
+                } catch (error) {
+                    // Body file might not exist
+                }
+            }
+            
+            // Search in response metadata file
             if (request.responseFilepath) {
                 try {
                     const content = await fs.readFile(request.responseFilepath, 'utf-8');
@@ -422,7 +485,7 @@ export class NetworkLoggerCDP {
                                 .join('\n');
                             
                             matches.push({
-                                type: 'response',
+                                type: 'response-metadata',
                                 filepath: request.responseFilepath,
                                 lineNumber: i + 1,
                                 matchedLine: lines[i],
@@ -435,8 +498,39 @@ export class NetworkLoggerCDP {
                 }
             }
             
+            // Search in response body .raw file
+            if (request.responseBodyFilepath) {
+                try {
+                    const bodyFilepath = path.join(this.logDir, request.responseBodyFilepath);
+                    const content = await fs.readFile(bodyFilepath, 'utf-8');
+                    const lines = content.split('\n');
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        if (matcher(lines[i])) {
+                            // Get context lines
+                            const startLine = Math.max(0, i - contextLines);
+                            const endLine = Math.min(lines.length - 1, i + contextLines);
+                            const contextText = lines.slice(startLine, endLine + 1)
+                                .map((line, idx) => `${startLine + idx + 1}: ${line}`)
+                                .join('\n');
+                            
+                            matches.push({
+                                type: 'response-body',
+                                filepath: request.responseBodyFilepath,
+                                lineNumber: i + 1,
+                                matchedLine: lines[i],
+                                context: contextText
+                            });
+                        }
+                    }
+                } catch (error) {
+                    // Body file might not exist
+                }
+            }
+            
             if (matches.length > 0) {
                 results.push({
+                    uniqueId: request.uniqueId,
                     url: request.url,
                     method: request.method,
                     timestamp: request.timestamp,
