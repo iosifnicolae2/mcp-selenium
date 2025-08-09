@@ -16,7 +16,9 @@
     "clean": "rm -rf dist",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "debug": "npm run build && npx @modelcontextprotocol/inspector node dist/src/server.js",
+    "inspect": "npx @modelcontextprotocol/inspector node dist/src/server.js"
   },
   "dependencies": {
     "@iosifnicolae22/mcp-selenium": "^1.2.2",
@@ -28,6 +30,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@modelcontextprotocol/inspector": "^0.2.5",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.0.14",
     "@types/selenium-webdriver": "^4.1.28",
