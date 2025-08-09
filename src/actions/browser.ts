@@ -11,6 +11,7 @@ import {
 import { getDriver } from '../helpers.js';
 import { state, SessionId } from '../state.js';
 import { browserOptionsSchema } from '../schemas.js';
+import { getNetworkLogger } from '../network-logger.js';
 
 export const registerBrowserActions = (server: McpServer) => {
     server.tool(
@@ -66,6 +67,11 @@ export const registerBrowserActions = (server: McpServer) => {
             try {
                 const driver = getDriver(state);
                 await driver.get(url);
+                
+                // Update network logger with current URL
+                const networkLogger = getNetworkLogger();
+                networkLogger.setCurrentUrl(url);
+                
                 return {
                     content: [{ type: 'text', text: `Navigated to ${url}` }]
                 };
@@ -90,6 +96,15 @@ export const registerBrowserActions = (server: McpServer) => {
                     state.drivers.delete(sessionId);
                 }
                 state.currentSession = null;
+
+                // Stop network logger if running
+                try {
+                    const networkLogger = getNetworkLogger();
+                    await networkLogger.stop();
+                } catch (loggerError) {
+                    console.warn('Failed to stop network logger:', loggerError);
+                }
+
                 return {
                     content: [{ type: 'text', text: `Browser session ${sessionId} closed` }]
                 };
@@ -114,6 +129,74 @@ export const registerBrowserActions = (server: McpServer) => {
                         : "No active browser session"
                 }]
             };
+        }
+    );
+
+    server.tool(
+        "get_network_log_directory",
+        "gets the network log directory for the current session",
+        {},
+        async () => {
+            try {
+                const networkLogger = getNetworkLogger();
+                const logDir = networkLogger.getLogDirectory();
+                return {
+                    content: [{ type: 'text', text: `Network logs directory: ${logDir}` }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{ type: 'text', text: `Error getting log directory: ${e.message}` }]
+                };
+            }
+        }
+    );
+
+    server.tool(
+        "get_page_requests",
+        "gets all network requests made from the current page or a specific page URL",
+        {
+            pageUrl: z.string().optional().describe("Optional page URL to get requests for. If not provided, uses current page URL")
+        },
+        async ({ pageUrl }) => {
+            try {
+                const networkLogger = getNetworkLogger();
+                
+                if (pageUrl) {
+                    networkLogger.setCurrentUrl(pageUrl);
+                }
+                
+                const index = await networkLogger.getRequestsForCurrentPage();
+                
+                if (!index || index.requests.length === 0) {
+                    return {
+                        content: [{ type: 'text', text: 'No network requests found for the current page' }]
+                    };
+                }
+
+                // Return the index with request summaries
+                const summary = {
+                    currentUrl: index.currentUrl,
+                    totalRequests: index.requests.length,
+                    requests: index.requests.map(req => ({
+                        timestamp: req.timestamp,
+                        method: req.method,
+                        url: req.url,
+                        status: req.status,
+                        requestFile: req.requestFile
+                    }))
+                };
+
+                return {
+                    content: [{ 
+                        type: 'text', 
+                        text: JSON.stringify(summary, null, 2) 
+                    }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{ type: 'text', text: `Error getting page requests: ${e.message}` }]
+                };
+            }
         }
     );
 };

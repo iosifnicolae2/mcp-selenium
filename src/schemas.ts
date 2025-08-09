@@ -3,7 +3,9 @@ import { z } from "zod";
 
 export const browserOptionsSchema = z.object({
     headless: z.boolean().optional().describe("Run browser in headless mode (not supported for Safari)"),
-    arguments: z.array(z.string()).optional().describe("Additional browser arguments")
+    arguments: z.array(z.string()).optional().describe("Additional browser arguments"),
+    logNetworkRequests: z.boolean().optional().describe("Log all network requests to files (enabled by default for Chrome, set to false to disable)"),
+    networkLogDir: z.string().optional().describe("Directory to save network logs (defaults to OS temp directory)")
 }).optional().describe("Browser options");
 
 export const locatorSchema = {
