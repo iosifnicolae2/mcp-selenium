@@ -15,6 +15,8 @@ export interface NetworkRequest {
     type?: string;
     size?: number;
     requestId?: string;
+    requestFilepath?: string;
+    responseFilepath?: string;
 }
 
 export class NetworkLoggerCDP {
@@ -87,6 +89,7 @@ export class NetworkLoggerCDP {
                         
                         // Save request immediately and get the filepath
                         const filepath = await this.saveRequest(request);
+                        request.requestFilepath = filepath;
                         this.requests.push(request);
                         
                         // Store in map for later response matching
@@ -137,6 +140,9 @@ export class NetworkLoggerCDP {
                                 body: responseBody,
                                 timestamp: new Date().toISOString()
                             });
+                            
+                            // Update request with response filepath
+                            request.responseFilepath = responseFilepath;
                             
                             // Update the request file
                             await fs.writeFile(filepath, JSON.stringify(request, null, 2));
@@ -274,6 +280,95 @@ export class NetworkLoggerCDP {
 
     getRequests(): NetworkRequest[] {
         return this.requests;
+    }
+    
+    async searchInFiles(pattern: string, useRegex: boolean = false, contextLines: number = 5): Promise<any[]> {
+        const results: any[] = [];
+        
+        // Create matcher
+        let matcher: (text: string) => boolean;
+        if (useRegex) {
+            const regex = new RegExp(pattern, 'gi');
+            matcher = (text: string) => regex.test(text);
+        } else {
+            const lowerPattern = pattern.toLowerCase();
+            matcher = (text: string) => text.toLowerCase().includes(lowerPattern);
+        }
+        
+        // Search through request files
+        for (const request of this.requests) {
+            const matches: any[] = [];
+            
+            // Search in request file
+            if (request.requestFilepath) {
+                try {
+                    const content = await fs.readFile(request.requestFilepath, 'utf-8');
+                    const lines = content.split('\n');
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        if (matcher(lines[i])) {
+                            // Get context lines
+                            const startLine = Math.max(0, i - contextLines);
+                            const endLine = Math.min(lines.length - 1, i + contextLines);
+                            const contextText = lines.slice(startLine, endLine + 1)
+                                .map((line, idx) => `${startLine + idx + 1}: ${line}`)
+                                .join('\n');
+                            
+                            matches.push({
+                                type: 'request',
+                                filepath: request.requestFilepath,
+                                lineNumber: i + 1,
+                                matchedLine: lines[i],
+                                context: contextText
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Failed to read request file ${request.requestFilepath}:`, error);
+                }
+            }
+            
+            // Search in response file
+            if (request.responseFilepath) {
+                try {
+                    const content = await fs.readFile(request.responseFilepath, 'utf-8');
+                    const lines = content.split('\n');
+                    
+                    for (let i = 0; i < lines.length; i++) {
+                        if (matcher(lines[i])) {
+                            // Get context lines
+                            const startLine = Math.max(0, i - contextLines);
+                            const endLine = Math.min(lines.length - 1, i + contextLines);
+                            const contextText = lines.slice(startLine, endLine + 1)
+                                .map((line, idx) => `${startLine + idx + 1}: ${line}`)
+                                .join('\n');
+                            
+                            matches.push({
+                                type: 'response',
+                                filepath: request.responseFilepath,
+                                lineNumber: i + 1,
+                                matchedLine: lines[i],
+                                context: contextText
+                            });
+                        }
+                    }
+                } catch (error) {
+                    console.error(`Failed to read response file ${request.responseFilepath}:`, error);
+                }
+            }
+            
+            if (matches.length > 0) {
+                results.push({
+                    url: request.url,
+                    method: request.method,
+                    timestamp: request.timestamp,
+                    status: request.responseStatus,
+                    matches: matches
+                });
+            }
+        }
+        
+        return results;
     }
 }
 

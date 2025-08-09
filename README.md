@@ -52,6 +52,7 @@ Network request logging is available **only for Chromium-based browsers** (Chrom
 **Network Logging Tools:**
 - `get_network_log_directory` - Gets the directory where network logs are saved
 - `get_page_requests` - Gets all network requests captured for the current page
+- `search_network_logs` - Searches through network logs using regex patterns or plain text
 
 ## Available Tools
 
@@ -60,6 +61,9 @@ Network request logging is available **only for Chromium-based browsers** (Chrom
 - **navigate** - Navigates to a specified URL
 - **close_session** - Closes the current browser session
 - **get_browser_status** - Gets the status of the current browser session
+- **get_network_log_directory** - Gets the directory where network logs are saved (Chrome/Edge only)
+- **get_page_requests** - Gets all network requests captured for the current page (Chrome/Edge only)
+- **search_network_logs** - Searches through network logs with regex support (Chrome/Edge only)
 
 ### Element Finding and Interaction
 - **find_element** - Finds an element using various locator strategies

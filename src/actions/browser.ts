@@ -226,4 +226,219 @@ export const registerBrowserActions = (server: McpServer) => {
             }
         }
     );
+
+    server.tool(
+        "search_network_logs",
+        "searches through network logs using regex patterns or plain text",
+        {
+            pattern: z.string().describe("Search pattern (supports regex when useRegex is true)"),
+            useRegex: z.boolean().optional().default(false).describe("Whether to use regex for pattern matching"),
+            searchIn: z.enum(["url", "method", "headers", "body", "all", "files"]).optional().default("all").describe("Where to search: url, method, headers, body, all, or files (searches in log files with context)"),
+            includeRequests: z.boolean().optional().default(true).describe("Whether to include requests in search"),
+            includeResponses: z.boolean().optional().default(true).describe("Whether to include responses in search"),
+            statusFilter: z.number().optional().describe("Filter by response status code"),
+            methodFilter: z.string().optional().describe("Filter by HTTP method (GET, POST, etc.)"),
+            contextLines: z.number().optional().default(5).describe("Number of context lines to show around matches when searching in files")
+        },
+        async ({ pattern, useRegex = false, searchIn = "all", includeRequests = true, includeResponses = true, statusFilter, methodFilter, contextLines = 5 }) => {
+            try {
+                if (!state.currentSession?.startsWith('chrome_') && !state.currentSession?.startsWith('edge_')) {
+                    return {
+                        content: [{ type: 'text', text: 'Network logging is only available for Chromium-based browsers (Chrome, Edge)' }]
+                    };
+                }
+                
+                const networkLogger = getNetworkLogger();
+                
+                // If searching in files, use the new searchInFiles method
+                if (searchIn === "files") {
+                    try {
+                        const fileResults = await networkLogger.searchInFiles(pattern, useRegex, contextLines);
+                        
+                        if (fileResults.length === 0) {
+                            return {
+                                content: [{ type: 'text', text: 'No matches found in network log files' }]
+                            };
+                        }
+                        
+                        // Apply filters if provided
+                        const filteredResults = fileResults.filter(result => {
+                            if (methodFilter && result.method !== methodFilter.toUpperCase()) {
+                                return false;
+                            }
+                            if (statusFilter !== undefined && result.status !== statusFilter) {
+                                return false;
+                            }
+                            return true;
+                        });
+                        
+                        if (filteredResults.length === 0) {
+                            return {
+                                content: [{ type: 'text', text: 'No matches found after applying filters' }]
+                            };
+                        }
+                        
+                        return {
+                            content: [{ 
+                                type: 'text', 
+                                text: JSON.stringify({
+                                    pattern: pattern,
+                                    useRegex: useRegex,
+                                    searchIn: searchIn,
+                                    contextLines: contextLines,
+                                    totalMatches: filteredResults.length,
+                                    results: filteredResults
+                                }, null, 2) 
+                            }]
+                        };
+                    } catch (e: any) {
+                        return {
+                            content: [{ type: 'text', text: `Error searching in files: ${e.message}` }]
+                        };
+                    }
+                }
+                
+                const requests = networkLogger.getRequests();
+                
+                if (requests.length === 0) {
+                    return {
+                        content: [{ type: 'text', text: 'No network requests found' }]
+                    };
+                }
+
+                // Create regex or string matcher
+                let matcher: (text: string) => boolean;
+                if (useRegex) {
+                    try {
+                        const regex = new RegExp(pattern, 'gi');
+                        matcher = (text: string) => regex.test(text);
+                    } catch (e) {
+                        return {
+                            content: [{ type: 'text', text: `Invalid regex pattern: ${e}` }]
+                        };
+                    }
+                } else {
+                    const lowerPattern = pattern.toLowerCase();
+                    matcher = (text: string) => text.toLowerCase().includes(lowerPattern);
+                }
+
+                // Helper function to search in object
+                const searchInObject = (obj: any): boolean => {
+                    if (!obj) return false;
+                    
+                    if (typeof obj === 'string') {
+                        return matcher(obj);
+                    } else if (typeof obj === 'object') {
+                        return Object.values(obj).some(value => searchInObject(value));
+                    }
+                    return false;
+                };
+
+                // Filter requests based on search criteria
+                const matchedRequests = requests.filter(req => {
+                    // Apply method filter if specified
+                    if (methodFilter && req.method !== methodFilter.toUpperCase()) {
+                        return false;
+                    }
+
+                    // Apply status filter if specified
+                    if (statusFilter !== undefined && req.responseStatus !== statusFilter) {
+                        return false;
+                    }
+
+                    // Search based on searchIn parameter
+                    let matches = false;
+                    
+                    if (searchIn === "all") {
+                        // Search in all fields
+                        if (includeRequests) {
+                            matches = matches || matcher(req.url) || matcher(req.method);
+                            if (req.headers) matches = matches || searchInObject(req.headers);
+                            if (req.requestBody) matches = matches || matcher(req.requestBody);
+                        }
+                        if (includeResponses) {
+                            if (req.responseHeaders) matches = matches || searchInObject(req.responseHeaders);
+                            if (req.responseBody) matches = matches || matcher(req.responseBody);
+                        }
+                    } else if (searchIn === "url") {
+                        matches = matcher(req.url);
+                    } else if (searchIn === "method") {
+                        matches = matcher(req.method);
+                    } else if (searchIn === "headers") {
+                        if (includeRequests && req.headers) matches = matches || searchInObject(req.headers);
+                        if (includeResponses && req.responseHeaders) matches = matches || searchInObject(req.responseHeaders);
+                    } else if (searchIn === "body") {
+                        if (includeRequests && req.requestBody) matches = matches || matcher(req.requestBody);
+                        if (includeResponses && req.responseBody) matches = matches || matcher(req.responseBody);
+                    }
+
+                    return matches;
+                });
+
+                if (matchedRequests.length === 0) {
+                    return {
+                        content: [{ type: 'text', text: 'No matching network requests found' }]
+                    };
+                }
+
+                // Prepare detailed results
+                const results = {
+                    pattern: pattern,
+                    useRegex: useRegex,
+                    searchIn: searchIn,
+                    totalMatches: matchedRequests.length,
+                    matches: matchedRequests.map(req => {
+                        const result: any = {
+                            timestamp: req.timestamp,
+                            method: req.method,
+                            url: req.url,
+                            status: req.responseStatus
+                        };
+
+                        // Include matched content preview if searching in body
+                        if (searchIn === "body" || searchIn === "all") {
+                            const bodyMatches: string[] = [];
+                            
+                            if (includeRequests && req.requestBody && matcher(req.requestBody)) {
+                                // Extract a snippet around the match
+                                const matchIndex = req.requestBody.toLowerCase().indexOf(pattern.toLowerCase());
+                                if (matchIndex !== -1) {
+                                    const start = Math.max(0, matchIndex - 50);
+                                    const end = Math.min(req.requestBody.length, matchIndex + pattern.length + 50);
+                                    bodyMatches.push(`Request: ...${req.requestBody.substring(start, end)}...`);
+                                }
+                            }
+                            
+                            if (includeResponses && req.responseBody && matcher(req.responseBody)) {
+                                // Extract a snippet around the match
+                                const matchIndex = req.responseBody.toLowerCase().indexOf(pattern.toLowerCase());
+                                if (matchIndex !== -1) {
+                                    const start = Math.max(0, matchIndex - 50);
+                                    const end = Math.min(req.responseBody.length, matchIndex + pattern.length + 50);
+                                    bodyMatches.push(`Response: ...${req.responseBody.substring(start, end)}...`);
+                                }
+                            }
+                            
+                            if (bodyMatches.length > 0) {
+                                result.matchedContent = bodyMatches;
+                            }
+                        }
+
+                        return result;
+                    })
+                };
+
+                return {
+                    content: [{ 
+                        type: 'text', 
+                        text: JSON.stringify(results, null, 2) 
+                    }]
+                };
+            } catch (e: any) {
+                return {
+                    content: [{ type: 'text', text: `Error searching network logs: ${e.message}` }]
+                };
+            }
+        }
+    );
 };
