@@ -15,12 +15,14 @@ export interface NetworkRequest {
     duration?: number;
     type?: string;
     size?: number;
+    requestId?: string;
 }
 
 export class NetworkLoggerCDP {
     private driver?: WebDriver;
     private logDir: string;
     private requests: NetworkRequest[] = [];
+    private requestMap: Map<string, { request: NetworkRequest; filepath: string }> = new Map();
     private captureInterval?: NodeJS.Timeout;
     private isCapturing: boolean = false;
 
@@ -77,41 +79,67 @@ export class NetworkLoggerCDP {
                             method: params.request.method,
                             headers: params.request.headers,
                             timestamp: new Date(params.wallTime * 1000).toISOString(),
-                            requestBody: params.request.postData
+                            requestBody: params.request.postData,
+                            requestId: params.requestId
                         };
                         
-                        // Save request immediately
-                        await this.saveRequest(request);
+                        // Save request immediately and get the filepath
+                        const filepath = await this.saveRequest(request);
                         this.requests.push(request);
+                        
+                        // Store in map for later response matching
+                        if (params.requestId) {
+                            this.requestMap.set(params.requestId, { request, filepath });
+                        }
                         
                         // Log to console
                         console.log(`[${request.method}] ${request.url}`);
                     } else if (method === 'Network.responseReceived') {
                         const response = params.response;
+                        const requestId = params.requestId;
                         
-                        // Find matching request and update it
-                        const matchingRequest = this.requests.find(r => r.url === response.url);
-                        if (matchingRequest) {
-                            matchingRequest.responseStatus = response.status;
-                            matchingRequest.responseHeaders = response.headers;
-                            matchingRequest.type = response.mimeType;
+                        // Find matching request by requestId
+                        const requestData = this.requestMap.get(requestId);
+                        if (requestData) {
+                            const { request, filepath } = requestData;
+                            
+                            // Update request with response data
+                            request.responseStatus = response.status;
+                            request.responseHeaders = response.headers;
+                            request.type = response.mimeType;
+                            
+                            // Save response to separate file
+                            const responseFilepath = await this.saveResponse({
+                                requestId,
+                                url: response.url,
+                                status: response.status,
+                                headers: response.headers,
+                                mimeType: response.mimeType,
+                                timestamp: new Date().toISOString()
+                            });
+                            
+                            // Update the request file
+                            await fs.writeFile(filepath, JSON.stringify(request, null, 2));
+                            
+                            // Update index with both request and response paths
+                            await this.updateIndex(request, filepath, responseFilepath);
                             
                             // Log response to console
                             console.log(`  └─ Response: ${response.status} (${response.mimeType})`);
-                            
-                            // Update saved request
-                            await this.saveRequest(matchingRequest);
                         }
                     } else if (method === 'Network.loadingFinished') {
                         // Update request with final size information
                         const requestId = params.requestId;
                         const encodedDataLength = params.encodedDataLength;
                         
-                        // Find request by requestId if we were tracking it
-                        const matchingRequest = this.requests[this.requests.length - 1];
-                        if (matchingRequest && encodedDataLength) {
-                            matchingRequest.size = encodedDataLength;
-                            await this.saveRequest(matchingRequest);
+                        // Find request by requestId
+                        const requestData = this.requestMap.get(requestId);
+                        if (requestData && encodedDataLength) {
+                            const { request, filepath } = requestData;
+                            request.size = encodedDataLength;
+                            
+                            // Update the request file with size
+                            await fs.writeFile(filepath, JSON.stringify(request, null, 2));
                         }
                     }
                 } catch (parseError) {
@@ -126,20 +154,33 @@ export class NetworkLoggerCDP {
         }
     }
 
-    private async saveRequest(request: NetworkRequest): Promise<void> {
+    private async saveRequest(request: NetworkRequest): Promise<string> {
+        const filename = `request_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.json`;
+        const filepath = path.join(this.logDir, filename);
+        
         try {
-            const filename = `request_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.json`;
-            const filepath = path.join(this.logDir, filename);
             await fs.writeFile(filepath, JSON.stringify(request, null, 2));
-            
-            // Also update the index file
-            await this.updateIndex(request);
+            return filepath;
         } catch (error) {
             console.warn('Failed to save network request:', error);
+            return filepath;
+        }
+    }
+    
+    private async saveResponse(response: any): Promise<string> {
+        const filename = `response_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.json`;
+        const filepath = path.join(this.logDir, filename);
+        
+        try {
+            await fs.writeFile(filepath, JSON.stringify(response, null, 2));
+            return filepath;
+        } catch (error) {
+            console.warn('Failed to save network response:', error);
+            return filepath;
         }
     }
 
-    private async updateIndex(request: NetworkRequest): Promise<void> {
+    private async updateIndex(request: NetworkRequest, requestFilepath?: string, responseFilepath?: string): Promise<void> {
         const indexFile = path.join(this.logDir, 'index.json');
         let index: any = { requests: [] };
 
@@ -150,14 +191,29 @@ export class NetworkLoggerCDP {
             // File doesn't exist yet
         }
 
-        index.requests.push({
+        // Find existing entry or create new one
+        const existingIndex = index.requests.findIndex((r: any) => 
+            r.url === request.url && r.timestamp === request.timestamp
+        );
+
+        const entry = {
             timestamp: request.timestamp,
             url: request.url,
             method: request.method,
             status: request.responseStatus,
             type: request.type,
-            size: request.size
-        });
+            size: request.size,
+            requestFilepath: requestFilepath || undefined,
+            responseFilepath: responseFilepath || undefined
+        };
+
+        if (existingIndex >= 0) {
+            // Update existing entry
+            index.requests[existingIndex] = { ...index.requests[existingIndex], ...entry };
+        } else {
+            // Add new entry
+            index.requests.push(entry);
+        }
 
         await fs.writeFile(indexFile, JSON.stringify(index, null, 2));
     }

@@ -19,6 +19,7 @@
     "test:coverage": "jest --coverage"
   },
   "dependencies": {
+    "@iosifnicolae22/mcp-selenium": "^1.2.2",
     "@modelcontextprotocol/sdk": "^1.16.0",
     "@types/express": "^5.0.3",
     "express": "^5.1.0",
