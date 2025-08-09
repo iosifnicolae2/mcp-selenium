@@ -229,28 +229,18 @@ Most tools accept an optional `timeout` parameter (default: 10000ms):
 
 ## Testing
 
-The project includes comprehensive tests for network logging functionality:
-
-### Unit Tests
+Run all tests:
 ```bash
-npm test                           # Run all tests
-npm test -- --testPathPattern=unit # Run only unit tests
+npm test
 ```
 
-### Integration Tests
-Integration tests require Chrome browser to be installed:
+Run specific test:
 ```bash
-npm test -- tests/network-logger-cdp.integration.test.ts
+npm test -- tests/network-logging.test.ts
 ```
 
-### Manual Testing
-A manual test script is provided to demonstrate network logging:
-```bash
-npm run build                     # Build the project first
-node test-network-logging.js      # Run the manual test
-```
-
-This will launch Chrome, navigate to example.com, and show captured network requests.
+The test suite includes:
+- **Network Logging Test**: Launches Chrome, navigates to google.com, and captures all network requests via Chrome DevTools Protocol
 
 ## Troubleshooting
 
