@@ -24,8 +24,10 @@
     "@iosifnicolae22/mcp-selenium": "^1.2.2",
     "@modelcontextprotocol/sdk": "^1.16.0",
     "@types/express": "^5.0.3",
+    "@types/js-beautify": "^1.14.3",
     "express": "^5.1.0",
     "http-proxy-middleware": "^3.0.5",
+    "js-beautify": "^1.15.4",
     "selenium-webdriver": "^4.34.0",
     "zod": "^3.25.76"
   },

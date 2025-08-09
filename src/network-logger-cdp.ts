@@ -1,6 +1,7 @@
 import { WebDriver, logging } from 'selenium-webdriver';
 import fs from 'fs/promises';
 import path from 'path';
+import beautify from 'js-beautify';
 
 export interface NetworkRequest {
     url: string;
@@ -144,8 +145,18 @@ export class NetworkLoggerCDP {
                             // Update request with response filepath
                             request.responseFilepath = responseFilepath;
                             
-                            // Update the request file
-                            await fs.writeFile(filepath, JSON.stringify(request, null, 2));
+                            // Update the request file with beautified content
+                            const beautifiedRequest = { ...request };
+                            if (beautifiedRequest.requestBody) {
+                                const contentType = beautifiedRequest.headers?.['content-type'] as string || 
+                                                   beautifiedRequest.headers?.['Content-Type'] as string;
+                                beautifiedRequest.requestBody = this.beautifyContent(beautifiedRequest.requestBody, contentType) || beautifiedRequest.requestBody;
+                            }
+                            if (beautifiedRequest.responseBody) {
+                                const contentType = beautifiedRequest.type;
+                                beautifiedRequest.responseBody = this.beautifyContent(beautifiedRequest.responseBody, contentType) || beautifiedRequest.responseBody;
+                            }
+                            await fs.writeFile(filepath, JSON.stringify(beautifiedRequest, null, 2));
                             
                             // Update index with both request and response paths
                             await this.updateIndex(request, filepath, responseFilepath);
@@ -164,8 +175,18 @@ export class NetworkLoggerCDP {
                             const { request, filepath } = requestData;
                             request.size = encodedDataLength;
                             
-                            // Update the request file with size
-                            await fs.writeFile(filepath, JSON.stringify(request, null, 2));
+                            // Update the request file with size and beautified content
+                            const beautifiedRequest = { ...request };
+                            if (beautifiedRequest.requestBody) {
+                                const contentType = beautifiedRequest.headers?.['content-type'] as string || 
+                                                   beautifiedRequest.headers?.['Content-Type'] as string;
+                                beautifiedRequest.requestBody = this.beautifyContent(beautifiedRequest.requestBody, contentType) || beautifiedRequest.requestBody;
+                            }
+                            if (beautifiedRequest.responseBody) {
+                                const contentType = beautifiedRequest.type;
+                                beautifiedRequest.responseBody = this.beautifyContent(beautifiedRequest.responseBody, contentType) || beautifiedRequest.responseBody;
+                            }
+                            await fs.writeFile(filepath, JSON.stringify(beautifiedRequest, null, 2));
                         }
                     }
                 } catch (parseError) {
@@ -180,12 +201,58 @@ export class NetworkLoggerCDP {
         }
     }
 
+    private beautifyContent(content: string | undefined, contentType?: string): string | undefined {
+        if (!content) return content;
+        
+        try {
+            // Try to detect content type if not provided
+            const isJson = contentType?.includes('json') || content.trim().startsWith('{') || content.trim().startsWith('[');
+            const isHtml = contentType?.includes('html') || content.trim().startsWith('<');
+            const isJavaScript = contentType?.includes('javascript') || contentType?.includes('js');
+            const isCss = contentType?.includes('css');
+            
+            if (isJson) {
+                // Parse and re-stringify JSON for consistent formatting
+                try {
+                    const parsed = JSON.parse(content);
+                    return JSON.stringify(parsed, null, 2);
+                } catch {
+                    // If JSON parsing fails, try JS beautify
+                    return beautify.js(content, { indent_size: 2 });
+                }
+            } else if (isHtml) {
+                return beautify.html(content, { indent_size: 2, wrap_line_length: 120 });
+            } else if (isJavaScript) {
+                return beautify.js(content, { indent_size: 2 });
+            } else if (isCss) {
+                return beautify.css(content, { indent_size: 2 });
+            } else {
+                // For other content types, try JS beautify as fallback
+                return beautify.js(content, { indent_size: 2 });
+            }
+        } catch (error) {
+            // If beautification fails, return original content
+            console.log('Failed to beautify content:', error);
+            return content;
+        }
+    }
+
     private async saveRequest(request: NetworkRequest): Promise<string> {
         const filename = `request_${Date.now()}_${Math.random().toString(36).substring(2, 11)}.json`;
         const filepath = path.join(this.logDir, filename);
         
         try {
-            await fs.writeFile(filepath, JSON.stringify(request, null, 2));
+            // Create a copy of the request to beautify
+            const beautifiedRequest = { ...request };
+            
+            // Beautify the request body if it exists
+            if (beautifiedRequest.requestBody) {
+                const contentType = beautifiedRequest.headers?.['content-type'] as string || 
+                                   beautifiedRequest.headers?.['Content-Type'] as string;
+                beautifiedRequest.requestBody = this.beautifyContent(beautifiedRequest.requestBody, contentType) || beautifiedRequest.requestBody;
+            }
+            
+            await fs.writeFile(filepath, JSON.stringify(beautifiedRequest, null, 2));
             return filepath;
         } catch (error) {
             console.error('Failed to save network request:', error);
@@ -198,7 +265,18 @@ export class NetworkLoggerCDP {
         const filepath = path.join(this.logDir, filename);
         
         try {
-            await fs.writeFile(filepath, JSON.stringify(response, null, 2));
+            // Create a copy of the response to beautify
+            const beautifiedResponse = { ...response };
+            
+            // Beautify the response body if it exists
+            if (beautifiedResponse.body) {
+                const contentType = beautifiedResponse.mimeType || 
+                                   beautifiedResponse.headers?.['content-type'] || 
+                                   beautifiedResponse.headers?.['Content-Type'];
+                beautifiedResponse.body = this.beautifyContent(beautifiedResponse.body, contentType) || beautifiedResponse.body;
+            }
+            
+            await fs.writeFile(filepath, JSON.stringify(beautifiedResponse, null, 2));
             return filepath;
         } catch (error) {
             console.error('Failed to save network response:', error);
